@@ -40,6 +40,7 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
         if (pendingReward > 0) {
             _claimReward(_owner, _recipient, pendingReward);
             emit RewardClaimed(reward(), _owner, _recipient, pendingReward);
+            pendingRewards[_owner] = 0;
         }
         return pendingReward;
     }
@@ -100,10 +101,10 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
         uint256 _totalShares
     )
         internal
-        pure
+        view
         returns (uint256)
     {
-        return RewardVaultMath.computeRewardPerToken(_rewardRate, _interval, _totalShares);
+        return lastRewardPerToken + RewardVaultMath.computeRewardPerToken(_rewardRate, _interval, _totalShares);
     }
 
     function _updateRewardPerToken() internal returns (uint256) {
