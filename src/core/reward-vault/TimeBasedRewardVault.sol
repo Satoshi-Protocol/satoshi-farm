@@ -67,6 +67,7 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
     function _updateReward(address _user) internal returns (uint256) {
         uint256 rewardPerToken = _updateRewardPerToken();
         uint256 rewardAmount = _computeReward(rewardConfig, userRewards[_user], rewardPerToken);
+        _updateUserRewardPerToken(_user, rewardPerToken);
         pendingRewards[_user] += rewardAmount;
         emit UpdatePendingReward(_user, rewardAmount, block.timestamp);
         return rewardAmount;
