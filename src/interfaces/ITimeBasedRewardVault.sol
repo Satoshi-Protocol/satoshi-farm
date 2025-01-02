@@ -8,14 +8,14 @@ struct RewardConfig {
     uint256 startTime;
     uint256 endTime;
     uint256 rewardRate;
-}
-
-struct UserRewardInfo {
-    uint256 amount;
-    uint256 lastRewardPerToken;
+    uint256 claimStartTime;
+    uint256 claimEndTime;
 }
 
 interface ITimeBasedRewardVault is IRewardVault {
+    error ClaimNotStarted(uint256 blockTimestamp, uint256 claimStartTime);
+
+    event UpdatePendingReward(address indexed user, uint256 amount, uint256 timestamp);
     event UpdateRewardConfig(RewardConfig config);
     event UpdateLastRewardPerToken(uint256 lastRewardPerToken, uint256 lastUpdateTime);
     event UpdateUserRewardPerToken(address user, uint256 lastRewardPerToken, uint256 lastUpdateTime);
@@ -28,5 +28,5 @@ interface ITimeBasedRewardVault is IRewardVault {
 
     function getLastUpdateTime() external view returns (uint256);
 
-    function getUserRewardInfo(address _user) external view returns (UserRewardInfo memory);
+    function getUserLastRewardPerToken(address _user) external view returns (uint256);
 }
