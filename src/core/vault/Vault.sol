@@ -11,6 +11,8 @@ import { RewardVault } from "../reward-vault/RewardVault.sol";
 import { TimeBasedRewardVault } from "../reward-vault/TimeBasedRewardVault.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { ERC4626Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -74,12 +76,9 @@ contract Vault is Initializable, IVault, ERC4626Upgradeable {
         if (_amount > maxAssets) {
             revert ERC4626ExceededMaxWithdraw(_owner, _amount, maxAssets);
         }
+
         uint256 shares = previewWithdraw(_amount);
-        if (_msgSender() != address(vaultManager)) {
-            _withdraw(_msgSender(), _receiver, _owner, _amount, shares);
-        } else {
-            _withdraw(_owner, _receiver, _owner, _amount, shares);
-        }
+        _withdraw(_owner, _receiver, _owner, _amount, shares);
         return shares;
     }
 
@@ -130,7 +129,26 @@ contract Vault is Initializable, IVault, ERC4626Upgradeable {
     }
 
     modifier onlyVaultManager() {
-        require(msg.sender == address(vaultManager), "Only vault manager can call this function");
+        if (msg.sender != address(vaultManager)) {
+            revert InvalidVaultManager(msg.sender, address(vaultManager));
+        }
         _;
+    }
+
+    // ---disable functions---
+    function transfer(address, uint256) public pure override(ERC20Upgradeable, IERC20) returns (bool) {
+        revert("Vault: Not allowed");
+    }
+
+    function transferFrom(address, address, uint256) public pure override(ERC20Upgradeable, IERC20) returns (bool) {
+        revert("Vault: Not allowed");
+    }
+
+    function redeem(uint256, address, address) public pure override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+        revert("Vault: Not allowed");
+    }
+
+    function mint(uint256, address) public pure override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+        revert("Vault: Not allowed");
     }
 }

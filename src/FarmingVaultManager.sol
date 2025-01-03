@@ -49,7 +49,7 @@ contract FarmingVaultManager is
         _unpause();
     }
 
-    function setGlobalConfig(FarmingVaultGlobalConfig memory _globalConfig) external onlyOwner {
+    function setGlobalConfig(FarmingVaultGlobalConfig memory _globalConfig) external onlyAdmin {
         globalConfig = _globalConfig;
     }
 
@@ -60,7 +60,7 @@ contract FarmingVaultManager is
     )
         public
         override
-        onlyOwner
+        onlyAdmin
         returns (address)
     {
         address goldFarmingVault = _decodeCreateVaultData(data);
@@ -86,7 +86,7 @@ contract FarmingVaultManager is
         RewardConfig memory _rewardConfig
     )
         external
-        onlyOwner
+        onlyAdmin
     {
         IFarmingVault(vault).updateFarmingVaultConfig(_config, _rewardConfig);
     }
@@ -106,7 +106,7 @@ contract FarmingVaultManager is
         }
 
         if (msg.sender != _owner) {
-            revert InvalidOwner(msg.sender);
+            revert InvalidFarmingOwner(_owner, msg.sender);
         }
 
         return IFarmingVault(vault).claimAndStake(_owner, _receiver, _stakeAmount);
@@ -124,8 +124,19 @@ contract FarmingVaultManager is
         return globalConfig;
     }
 
+    function admin() public view override(RewardManager, VaultManager) returns (address) {
+        return owner();
+    }
+
     // --- internal functions ---
     function _decodeCreateVaultData(bytes memory data) internal pure returns (address) {
         return abi.decode(data, (address));
+    }
+
+    modifier onlyAdmin() override(RewardManager, VaultManager) {
+        if (msg.sender != admin()) {
+            revert InvalidAdmin(admin(), msg.sender);
+        }
+        _;
     }
 }

@@ -7,7 +7,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IRewardManager {
     error InvalidRewardVault(address vault);
     error InvalidReward(address expected, address actual);
-    error InvalidOwner(address owner);
+    error InvalidRewardOwner(address expected, address actual);
 
     event ClaimRewards(address rewardVault, address owner, address recipient);
     event AllocateReward(address rewardVault, address token, uint256 amount);

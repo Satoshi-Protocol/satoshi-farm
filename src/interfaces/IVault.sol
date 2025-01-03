@@ -13,8 +13,8 @@ interface IVault is IERC4626 {
     error InvalidStrategy();
     error InvalidAmount();
     error InvalidReceiver();
-    error InvalidManager(address manager);
-    error InvalidOwner(address owner);
+    error InvalidVaultManager(address caller, address manager);
+    error InvalidOwner(address caller, address owner);
     error AssetBalanceChangedUnexpectedly(uint256 expected, uint256 actual);
     error InsufficientAssetBalance(uint256 expected, uint256 actual);
     error MaxAssetExceeded(uint256 amount, uint256 maxAsset);

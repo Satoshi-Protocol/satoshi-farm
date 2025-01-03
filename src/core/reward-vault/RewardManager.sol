@@ -14,21 +14,29 @@ abstract contract RewardManager is IRewardManager, Initializable {
         underlyingReward = _underlyingReward;
     }
 
-    function previewReward(address vault, address owner) external view returns (uint256) {
-        if (!isValidVault(vault)) {
-            revert InvalidRewardVault(vault);
+    // --- admin functions ---
+    function updateRewardConfig(address _vault, RewardConfig memory _config) external onlyAdmin {
+        if (!isValidVault(_vault)) {
+            revert InvalidRewardVault(_vault);
         }
-        return IRewardVault(vault).previewReward(owner);
+        ITimeBasedRewardVault(_vault).updateRewardConfig(_config);
     }
 
-    function claimReward(address vault, address owner, address recipient) external returns (uint256) {
-        if (!isValidVault(vault)) {
-            revert InvalidRewardVault(vault);
+    function previewReward(address _vault, address _owner) external view returns (uint256) {
+        if (!isValidVault(_vault)) {
+            revert InvalidRewardVault(_vault);
         }
-        if (msg.sender != owner) {
-            revert InvalidOwner(msg.sender);
+        return IRewardVault(_vault).previewReward(_owner);
+    }
+
+    function claimReward(address _vault, address _owner, address _recipient) external returns (uint256) {
+        if (!isValidVault(_vault)) {
+            revert InvalidRewardVault(_vault);
         }
-        return IRewardVault(vault).claimReward(owner, recipient);
+        if (msg.sender != _owner) {
+            revert InvalidRewardOwner(_owner, msg.sender);
+        }
+        return IRewardVault(_vault).claimReward(_owner, _recipient);
     }
 
     function rewardVaultMintCallback(address reward, address recipient, uint256 amount, bytes calldata) external {
@@ -41,12 +49,14 @@ abstract contract RewardManager is IRewardManager, Initializable {
         underlyingReward.mint(recipient, amount);
     }
 
-    function updateRewardConfig(address vault, RewardConfig memory config) external {
-        if (!isValidVault(vault)) {
-            revert InvalidRewardVault(vault);
-        }
-        ITimeBasedRewardVault(vault).updateRewardConfig(config);
-    }
-
     function isValidVault(address vault) public view virtual returns (bool);
+
+    function admin() public view virtual returns (address);
+
+    modifier onlyAdmin() virtual {
+        if (msg.sender != admin()) {
+            revert("InvalidAdmin");
+        }
+        _;
+    }
 }

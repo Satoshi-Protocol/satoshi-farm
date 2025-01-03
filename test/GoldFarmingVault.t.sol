@@ -10,105 +10,19 @@ import { ITimeBasedRewardVault } from "../src/interfaces/ITimeBasedRewardVault.s
 import { IVault } from "../src/interfaces/IVault.sol";
 import { IVaultManager } from "../src/interfaces/IVaultManager.sol";
 import { RewardVaultMath } from "../src/libraries/RewardVaultMath.sol";
-import { FarmingVaultDeployers } from "./utils/FarmingVaultDeployers.sol";
-import { TestBase } from "./utils/TestBase.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Deployers } from "./utils/Deployers.sol";
+import { VaultTest } from "./utils/VaultTest.sol";
 
-contract FarmingVaultTest is TestBase, FarmingVaultDeployers {
-    struct Config {
-        // vault config
-        uint256 startTime;
-        uint256 endTime;
-        uint256 rewardRate;
-        uint256 claimStartTime;
-        uint256 maxAsset;
-        // asset config
-        uint8 assetDecimals;
-        // refund config
-        uint256 refundRatio;
+contract GoldFarmingVaultTest is VaultTest {
+    function testFuzz_user_deposit(uint256 amount) public {
+        vm.assume(amount <= config.maxAsset);
+        vm.assume(amount <= gold.balanceOf(user_1));
+        deposit(address(manager), user_1, amount, address(goldFarmingVault), address(gold));
     }
 
-    Config public config;
-
-    function setUp() public {
-        config = defaultConfig();
-        vm.startPrank(admin);
-        asset = deployToken("Asset", "ASSET", config.assetDecimals);
-        gold = deployGold();
-        manager = deployFarmingVaultManager(gold, config.refundRatio);
-        goldFarmingVault = createGoldFarmingVault(gold);
-        setupFarmingVault(address(goldFarmingVault), config.rewardRate, config.claimStartTime, config.maxAsset);
-        gold.setAuthorized(address(manager), true);
-        deal(address(gold), user_1, 1e5 * 10 ** 18);
-        deal(address(gold), user_2, 1e5 * 10 ** 18);
-        vm.stopPrank();
-        vm.warp(200);
-    }
-
-    function test_user_deposit() public {
-        uint256 amount = 100;
-        uint256 balanceBefore = gold.balanceOf(user_1);
-        vm.startPrank(user_1);
-        gold.approve(address(manager), amount);
-        uint256 shares = IVaultManager(address(manager)).deposit(amount, address(goldFarmingVault), user_1);
-        vm.stopPrank();
-        assertEq(shares, amount);
-        checkBalance(gold, user_1, balanceBefore - amount);
-        checkBalance(gold, address(goldFarmingVault), amount);
-    }
-
-    function test_user_claim_reward() public {
-        uint256 amount = 100;
-        uint256 depositTime = block.timestamp;
-        uint256 secondsPassed = config.claimStartTime - depositTime + 1;
-
-        vm.startPrank(user_1);
-        gold.approve(address(manager), amount);
-        IVaultManager(address(manager)).deposit(amount, address(goldFarmingVault), user_1);
-        vm.stopPrank();
-
-        vm.warp(depositTime + secondsPassed);
-
-        ITimeBasedRewardVault timeBasedRewardVault = ITimeBasedRewardVault(address(goldFarmingVault));
-        uint256 lastRewardPerToken = timeBasedRewardVault.getLastRewardPerToken();
-        uint256 totalShares = timeBasedRewardVault.totalShares();
-        uint256 lastUpdateTime = timeBasedRewardVault.getLastUpdateTime();
-        uint256 pendingReward = IRewardVault(address(goldFarmingVault)).getPendingReward(user_1);
-        uint256 interval =
-            RewardVaultMath.computeInterval(block.timestamp, lastUpdateTime, config.startTime, config.endTime);
-        uint256 latestRewardPerToken = RewardVaultMath.computeRewardPerToken(config.rewardRate, interval, totalShares);
-        uint256 expectedReward =
-            pendingReward + RewardVaultMath.computeReward(amount, latestRewardPerToken, lastRewardPerToken);
-        uint256 actualReward = IRewardVault(address(goldFarmingVault)).previewReward(user_1);
-
-        assertEq(actualReward, expectedReward);
-
-        uint256 balanceBefore = gold.balanceOf(user_1);
-        vm.startPrank(user_1);
-        IRewardManager(address(manager)).claimReward(address(goldFarmingVault), user_1, user_1);
-        vm.stopPrank();
-        // checkBalance(gold, user_1, balanceBefore);
-    }
-
-    function test_user_withdraw() public {
-        uint256 amount = 100;
-        uint256 balanceBefore = gold.balanceOf(user_1);
-        vm.startPrank(user_1);
-        gold.approve(address(manager), amount);
-        IVaultManager(address(manager)).deposit(amount, address(goldFarmingVault), user_1);
-        uint256 pendingReward = IRewardVault(address(goldFarmingVault)).getPendingReward(user_1);
-        assertEq(pendingReward, 0);
-        vm.warp(400);
-        uint256 shares = IVaultManager(address(manager)).withdraw(amount, address(goldFarmingVault), user_1, user_1);
-        vm.stopPrank();
-        assertEq(shares, amount);
-        // checkBalance(asset, user_1, balanceBefore);
-        // checkBalance(gold, address(farmingVault), 0);
-    }
-
-    function test_user_deposit_exceed_max_asset() public {
-        uint256 amount = 1e20 + 1;
+    function testFuzz_user_deposit_exceed_max_asset(uint256 amount) public {
+        vm.assume(amount > config.maxAsset);
+        vm.assume(amount <= gold.balanceOf(user_1));
         vm.startPrank(user_1);
         gold.approve(address(manager), amount);
         vm.expectPartialRevert(IVault.MaxAssetExceeded.selector);
@@ -116,46 +30,62 @@ contract FarmingVaultTest is TestBase, FarmingVaultDeployers {
         vm.stopPrank();
     }
 
-    function test_user_claim_reward_before_claim_start_time() public {
-        uint256 amount = 100;
-        uint256 claimTime = block.timestamp + 100;
-        assertEq(claimTime < config.claimStartTime, true);
-        vm.startPrank(user_1);
-        gold.approve(address(manager), amount);
-        IVaultManager(address(manager)).deposit(amount, address(goldFarmingVault), user_1);
+    function testFuzz_user_withdraw(uint256 depositAmount, uint256 withdrawAmount) public {
+        vm.assume(depositAmount <= config.maxAsset);
+        vm.assume(withdrawAmount <= depositAmount);
+        vm.assume(withdrawAmount < gold.balanceOf(user_1));
+        deposit(address(manager), user_1, depositAmount, address(goldFarmingVault), address(gold));
+        withdraw(address(manager), user_1, withdrawAmount, address(goldFarmingVault), address(gold));
+    }
+
+    function testFuzz_user_claim_reward(uint256 amount) public {
+        vm.assume(amount <= config.maxAsset);
+        vm.assume(amount <= gold.balanceOf(user_1));
+        uint256 depositTime = block.timestamp;
+        uint256 secondsPassed = config.claimStartTime - depositTime + 1;
+
+        deposit(address(manager), user_1, amount, address(goldFarmingVault), address(gold));
+
+        vm.warp(depositTime + secondsPassed);
+
+        uint256 expectedReward = computeReward(address(goldFarmingVault), user_1);
+        uint256 actualReward = IRewardVault(address(goldFarmingVault)).previewReward(user_1);
+        assertEq(actualReward, expectedReward);
+
+        claimReward(address(manager), user_1, address(goldFarmingVault), address(gold));
+    }
+
+    function testFuzz_user_claim_reward_before_claim_start_time(uint256 amount, uint256 claimTime) public {
+        vm.assume(amount <= config.maxAsset);
+        vm.assume(amount <= gold.balanceOf(user_1));
+
+        vm.assume(claimTime > block.timestamp);
+        vm.assume(claimTime < config.claimStartTime);
+
+        deposit(address(manager), user_1, amount, address(goldFarmingVault), address(gold));
+
         vm.warp(claimTime);
+
+        vm.startPrank(user_1);
         vm.expectPartialRevert(ITimeBasedRewardVault.ClaimNotStarted.selector);
         IRewardManager(address(manager)).claimReward(address(goldFarmingVault), user_1, user_1);
         vm.stopPrank();
     }
 
-    function test_user_claim_and_stake() public {
-        uint256 amount = 100;
-        uint256 depositTime = block.timestamp;
-        uint256 secondsPassed = config.claimStartTime - depositTime - 1;
+    function testFuzz_user_claim_and_stake(uint256 amount, uint256 claimTime) public {
+        vm.assume(amount <= config.maxAsset);
+        vm.assume(amount <= gold.balanceOf(user_1));
 
-        vm.startPrank(user_1);
-        gold.approve(address(manager), amount);
-        IVaultManager(address(manager)).deposit(amount, address(goldFarmingVault), user_1);
-        vm.stopPrank();
+        vm.assume(claimTime > block.timestamp);
+        vm.assume(claimTime < config.claimStartTime);
 
-        vm.warp(depositTime + secondsPassed);
+        deposit(address(manager), user_1, amount, address(goldFarmingVault), address(gold));
+
+        vm.warp(claimTime);
 
         vm.startPrank(user_1);
         vm.expectPartialRevert(IFarmingVault.NotSupportClaimAndStake.selector);
         manager.claimAndStake(address(goldFarmingVault), user_1, user_1, amount);
         vm.stopPrank();
-    }
-
-    function defaultConfig() public pure returns (Config memory) {
-        return Config({
-            startTime: 100,
-            endTime: 1000,
-            rewardRate: 1e10,
-            claimStartTime: 500,
-            maxAsset: 1e20,
-            assetDecimals: 18,
-            refundRatio: 50 * 1_000_000 / 100
-        });
     }
 }

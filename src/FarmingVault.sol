@@ -63,7 +63,15 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
         updateRewardConfig(_rewardConfig);
     }
 
-    function claimAndStake(address _owner, address _receiver, uint256 _stakeAmount) public returns (uint256, uint256) {
+    function claimAndStake(
+        address _owner,
+        address _receiver,
+        uint256 _stakeAmount
+    )
+        public
+        onlyFarmingVaultManager
+        returns (uint256, uint256)
+    {
         if (_isGoldFarmingVault()) {
             revert NotSupportClaimAndStake();
         }
@@ -86,10 +94,11 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
             return (0, rewardAmount);
         }
         _stakeReward(_stakeAmount, _receiver);
-        _refundReward(rewardAmount - _stakeAmount, _owner);
-        return (rewardAmount - _stakeAmount, _stakeAmount);
+        uint256 refundAmount = _refundReward(rewardAmount - _stakeAmount, _owner);
+        return (refundAmount, _stakeAmount);
     }
 
+    // --- public functions ---
     function totalShares() public view override(RewardVault, IRewardVault) returns (uint256) {
         return totalSupply();
     }
@@ -131,14 +140,14 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
 
     modifier onlyOwner() {
         if (msg.sender != owner()) {
-            revert InvalidOwner(msg.sender);
+            revert InvalidOwner(msg.sender, owner());
         }
         _;
     }
 
     modifier onlyFarmingVaultManager() {
-        if (msg.sender != address(vaultManager)) {
-            revert InvalidFarmingVaultManager(msg.sender, address(vaultManager));
+        if (msg.sender != address(farmingVaultManager)) {
+            revert InvalidFarmingVaultManager(msg.sender, address(farmingVaultManager));
         }
         _;
     }

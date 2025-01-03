@@ -19,7 +19,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Test } from "forge-std/Test.sol";
 import { MockERC20 } from "solmate/test/utils/mocks/MockERC20.sol";
 
-contract FarmingVaultDeployers is Test {
+contract Deployers is Test {
     address public admin = address(0x1);
     address public user_1 = address(0x2);
     address public user_2 = address(0x3);
@@ -66,27 +66,15 @@ contract FarmingVaultDeployers is Test {
         return farmingVault;
     }
 
-    function setupRewardVault(address _vault, uint256 _rewardRate, uint256 _claimStartTime) public {
-        assert(address(_vault) != address(0));
-        IRewardManager(address(manager)).updateRewardConfig(
-            _vault, RewardConfig(block.timestamp, type(uint256).max, _rewardRate, _claimStartTime, type(uint256).max)
-        );
-    }
-
     function setupFarmingVault(
         address _vault,
-        uint256 _rewardRate,
-        uint256 _claimStartTime,
-        uint256 _maxAsset
+        RewardConfig memory _rewardConfig,
+        VaultConfig memory _vaultConfig
     )
         public
     {
         assert(address(_vault) != address(0));
-        manager.updateFarmingVaultConfig(
-            _vault,
-            VaultConfig(_maxAsset),
-            RewardConfig(block.timestamp, type(uint256).max, _rewardRate, _claimStartTime, type(uint256).max)
-        );
+        manager.updateFarmingVaultConfig(_vault, _vaultConfig, _rewardConfig);
     }
 
     function deployToken(string memory _name, string memory _symbol, uint8 _decimals) public returns (IERC20) {

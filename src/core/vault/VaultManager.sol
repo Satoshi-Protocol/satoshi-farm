@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IVault } from "../../interfaces/IVault.sol";
+import { IVault, VaultConfig } from "../../interfaces/IVault.sol";
 import { IVaultManager } from "../../interfaces/IVaultManager.sol";
 
 import { IVaultDepositAssetCallback } from "../../interfaces/callbacks/IVaultDepositAssetCallback.sol";
@@ -24,6 +24,14 @@ abstract contract VaultManager is Initializable, IVaultManager {
         underlyingPointToken = _underlyingPointToken;
     }
 
+    // --- admin functions ---
+    function updateConfig(address _vault, VaultConfig memory _config) public onlyAdmin {
+        if (!isValidVault(_vault)) {
+            revert VaultNotValid();
+        }
+        IVault(_vault).updateConfig(_config);
+    }
+
     // --- public functions ---
     function deposit(uint256 _assets, address _vault, address _receiver) public returns (uint256) {
         if (!isValidVault(_vault)) {
@@ -38,6 +46,10 @@ abstract contract VaultManager is Initializable, IVaultManager {
         if (!isValidVault(_vault)) {
             revert VaultNotValid();
         }
+        if (_owner != msg.sender) {
+            revert InvalidShareOwner(_owner, msg.sender);
+        }
+
         uint256 assets = IVault(_vault).withdraw(_amount, _receiver, _owner);
         emit Withdraw(_vault, _amount, _receiver, _owner);
         return assets;
@@ -59,4 +71,13 @@ abstract contract VaultManager is Initializable, IVaultManager {
     }
 
     function isValidVault(address _vault) public view virtual returns (bool);
+
+    function admin() public view virtual returns (address);
+
+    modifier onlyAdmin() virtual {
+        if (msg.sender != admin()) {
+            revert("InvalidAdmin");
+        }
+        _;
+    }
 }
