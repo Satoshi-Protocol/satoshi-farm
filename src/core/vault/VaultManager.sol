@@ -42,16 +42,13 @@ abstract contract VaultManager is Initializable, IVaultManager {
         return shares;
     }
 
-    function withdraw(uint256 _amount, address _vault, address _receiver, address _owner) public returns (uint256) {
+    function withdraw(uint256 _amount, address _vault, address _receiver) public returns (uint256) {
         if (!isValidVault(_vault)) {
             revert VaultNotValid();
         }
-        if (_owner != msg.sender) {
-            revert InvalidShareOwner(_owner, msg.sender);
-        }
 
-        uint256 assets = IVault(_vault).withdraw(_amount, _receiver, _owner);
-        emit Withdraw(_vault, _amount, _receiver, _owner);
+        uint256 assets = IVault(_vault).withdraw(_amount, _receiver, msg.sender);
+        emit Withdraw(_vault, _amount, _receiver, msg.sender);
         return assets;
     }
 

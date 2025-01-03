@@ -17,7 +17,7 @@ interface IVaultManager {
 
     function deposit(uint256 assets, address vault, address receiver) external returns (uint256);
 
-    function withdraw(uint256 amount, address vault, address receiver, address owner) external returns (uint256);
+    function withdraw(uint256 amount, address vault, address receiver) external returns (uint256);
 
     function updateConfig(address vault, VaultConfig memory _config) external;
 }

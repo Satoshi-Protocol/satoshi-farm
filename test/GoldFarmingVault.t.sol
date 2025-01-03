@@ -68,7 +68,7 @@ contract GoldFarmingVaultTest is VaultTest {
 
         vm.startPrank(user_1);
         vm.expectPartialRevert(ITimeBasedRewardVault.ClaimNotStarted.selector);
-        IRewardManager(address(manager)).claimReward(address(goldFarmingVault), user_1, user_1);
+        IRewardManager(address(manager)).claimReward(address(goldFarmingVault), user_1);
         vm.stopPrank();
     }
 
@@ -85,7 +85,7 @@ contract GoldFarmingVaultTest is VaultTest {
 
         vm.startPrank(user_1);
         vm.expectPartialRevert(IFarmingVault.NotSupportClaimAndStake.selector);
-        manager.claimAndStake(address(goldFarmingVault), user_1, user_1, amount);
+        manager.claimAndStake(address(goldFarmingVault), user_1, amount);
         vm.stopPrank();
     }
 }

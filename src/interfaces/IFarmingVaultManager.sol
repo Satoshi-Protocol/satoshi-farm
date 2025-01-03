@@ -12,7 +12,6 @@ struct FarmingVaultGlobalConfig {
 interface IFarmingVaultManager {
     error InvalidFarmingVault(address vault);
     error InvalidAdmin(address expected, address actual);
-    error InvalidFarmingOwner(address expected, address actual);
 
     event VaultCreated(address vault, address asset);
 
@@ -20,7 +19,6 @@ interface IFarmingVaultManager {
 
     function claimAndStake(
         address vault,
-        address _owner,
         address _receiver,
         uint256 _stakeAmount
     )

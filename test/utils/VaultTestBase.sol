@@ -43,7 +43,7 @@ contract VaultTestBase is TestBase {
     {
         uint256 balanceBefore = IERC20(asset).balanceOf(user);
         vm.startPrank(user);
-        uint256 assets = IVaultManager(manager).withdraw(amount, vault, user, user);
+        uint256 assets = IVaultManager(manager).withdraw(amount, vault, user);
         vm.stopPrank();
         checkBalance(IERC20(asset), user, balanceBefore + assets);
         return assets;
@@ -52,7 +52,7 @@ contract VaultTestBase is TestBase {
     function claimReward(address manager, address user, address vault, address asset) public returns (uint256) {
         uint256 balanceBefore = IERC20(asset).balanceOf(user);
         vm.startPrank(user);
-        uint256 reward = IRewardManager(manager).claimReward(vault, user, user);
+        uint256 reward = IRewardManager(manager).claimReward(vault, user);
         vm.stopPrank();
         checkBalance(IERC20(asset), user, balanceBefore + reward);
         return reward;
@@ -75,7 +75,7 @@ contract VaultTestBase is TestBase {
             computeRefundAmount(farmingVaultManager.getGlobalConfig().refundRatio, stakeAmount, rewardAmount);
         uint256 balanceBefore = IERC20(reward).balanceOf(user);
         vm.startPrank(user);
-        (uint256 claimed, uint256 staked) = IFarmingVaultManager(manager).claimAndStake(vault, user, user, stakeAmount);
+        (uint256 claimed, uint256 staked) = IFarmingVaultManager(manager).claimAndStake(vault, user, stakeAmount);
         vm.stopPrank();
         checkBalance(IERC20(reward), user, balanceBefore + claimed);
         assertEq(staked, stakeAmount);

@@ -29,14 +29,13 @@ abstract contract RewardManager is IRewardManager, Initializable {
         return IRewardVault(_vault).previewReward(_owner);
     }
 
-    function claimReward(address _vault, address _owner, address _recipient) external returns (uint256) {
+    function claimReward(address _vault, address _recipient) external returns (uint256) {
         if (!isValidVault(_vault)) {
             revert InvalidRewardVault(_vault);
         }
-        if (msg.sender != _owner) {
-            revert InvalidRewardOwner(_owner, msg.sender);
-        }
-        return IRewardVault(_vault).claimReward(_owner, _recipient);
+        uint256 amount = IRewardVault(_vault).claimReward(msg.sender, _recipient);
+        emit ClaimReward(_vault, msg.sender, _recipient);
+        return amount;
     }
 
     function rewardVaultMintCallback(address reward, address recipient, uint256 amount, bytes calldata) external {

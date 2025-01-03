@@ -80,6 +80,30 @@ contract FarmingVaultTest is VaultTest {
         deposit(address(manager), user_1, amount, address(farmingVault), address(asset));
     }
 
+    function testFuzz_users_deposit(uint256 amount0, uint256 amount1, uint256 claimTime) public {
+        vm.assume(amount0 <= config.maxAsset);
+        vm.assume(amount1 <= config.maxAsset);
+        vm.assume(amount0 + amount1 <= config.maxAsset);
+        vm.assume(amount0 <= asset.balanceOf(user_1));
+        vm.assume(amount1 <= asset.balanceOf(user_2));
+
+        vm.assume(claimTime > block.timestamp);
+        vm.assume(claimTime > config.claimStartTime);
+
+        deposit(address(manager), user_1, amount0, address(farmingVault), address(asset));
+        deposit(address(manager), user_2, amount1, address(farmingVault), address(asset));
+
+        vm.warp(claimTime);
+
+        uint256 expectedReward = computeReward(address(farmingVault), user_1);
+        uint256 actualReward = IRewardVault(address(farmingVault)).previewReward(user_1);
+        assertEq(actualReward, expectedReward);
+
+        uint256 expectedReward2 = computeReward(address(farmingVault), user_2);
+        uint256 actualReward2 = IRewardVault(address(farmingVault)).previewReward(user_2);
+        assertEq(actualReward2, expectedReward2);
+    }
+
     function testFuzz_user_deposit_exceed_max_asset(uint256 amount) public {
         vm.assume(amount > config.maxAsset);
         vm.assume(amount <= asset.balanceOf(user_1));
@@ -96,17 +120,6 @@ contract FarmingVaultTest is VaultTest {
         vm.assume(withdrawAmount < asset.balanceOf(user_1));
         deposit(address(manager), user_1, depositAmount, address(farmingVault), address(asset));
         withdraw(address(manager), user_1, withdrawAmount, address(farmingVault), address(asset));
-    }
-
-    function testFuzz_user_withdraw_other_user_asset(uint256 depositAmount, uint256 withdrawAmount) public {
-        vm.assume(depositAmount <= config.maxAsset);
-        vm.assume(withdrawAmount <= depositAmount);
-        vm.assume(withdrawAmount < asset.balanceOf(user_1));
-        deposit(address(manager), user_1, depositAmount, address(farmingVault), address(asset));
-        vm.startPrank(user_2);
-        vm.expectPartialRevert(IVaultManager.InvalidShareOwner.selector);
-        IVaultManager(address(manager)).withdraw(withdrawAmount, address(farmingVault), user_2, user_1);
-        vm.stopPrank();
     }
 
     function testFuzz_user_claim_reward(uint256 amount, uint256 claimTime) public {
@@ -126,26 +139,6 @@ contract FarmingVaultTest is VaultTest {
         claimReward(address(manager), user_1, address(farmingVault), address(gold));
     }
 
-    function testFuzz_user_claim_other_user_reward(uint256 amount, uint256 claimTime) public {
-        vm.assume(amount <= config.maxAsset);
-        vm.assume(amount <= asset.balanceOf(user_1));
-        vm.assume(claimTime > block.timestamp);
-        vm.assume(claimTime > config.claimStartTime);
-
-        deposit(address(manager), user_1, amount, address(farmingVault), address(asset));
-
-        vm.warp(claimTime);
-
-        uint256 expectedReward = computeReward(address(farmingVault), user_1);
-        uint256 actualReward = IRewardVault(address(farmingVault)).previewReward(user_1);
-        assertEq(actualReward, expectedReward);
-
-        vm.startPrank(user_2);
-        vm.expectPartialRevert(IRewardManager.InvalidRewardOwner.selector);
-        IRewardManager(address(manager)).claimReward(address(farmingVault), user_1, user_2);
-        vm.stopPrank();
-    }
-
     function testFuzz_user_claim_reward_before_claim_start_time(uint256 amount, uint256 claimTime) public {
         vm.assume(amount <= config.maxAsset);
         vm.assume(amount <= asset.balanceOf(user_1));
@@ -159,7 +152,7 @@ contract FarmingVaultTest is VaultTest {
 
         vm.startPrank(user_1);
         vm.expectPartialRevert(ITimeBasedRewardVault.ClaimNotStarted.selector);
-        IRewardManager(address(manager)).claimReward(address(farmingVault), user_1, user_1);
+        IRewardManager(address(manager)).claimReward(address(farmingVault), user_1);
         vm.stopPrank();
     }
 
@@ -179,32 +172,5 @@ contract FarmingVaultTest is VaultTest {
         vm.assume(stakeAmount <= rewardAmount);
 
         claimAndStake(address(manager), user_1, address(farmingVault), address(gold), stakeAmount);
-    }
-
-    function testFuzz_user_claim_and_stake_other_user(
-        uint256 depoistAmount,
-        uint256 stakeAmount,
-        uint256 claimTime
-    )
-        public
-    {
-        vm.assume(depoistAmount <= config.maxAsset);
-        vm.assume(depoistAmount <= asset.balanceOf(user_1));
-
-        vm.assume(claimTime > block.timestamp);
-        vm.assume(claimTime < config.claimStartTime);
-
-        deposit(address(manager), user_1, depoistAmount, address(farmingVault), address(asset));
-
-        vm.warp(claimTime);
-
-        uint256 rewardAmount = IRewardVault(address(farmingVault)).previewReward(user_1);
-
-        vm.assume(stakeAmount <= rewardAmount);
-
-        vm.startPrank(user_2);
-        vm.expectPartialRevert(IFarmingVaultManager.InvalidFarmingOwner.selector);
-        manager.claimAndStake(address(farmingVault), user_1, user_2, stakeAmount);
-        vm.stopPrank();
     }
 }

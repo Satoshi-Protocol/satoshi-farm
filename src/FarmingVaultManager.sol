@@ -94,7 +94,6 @@ contract FarmingVaultManager is
     // --- public functions ---
     function claimAndStake(
         address vault,
-        address _owner,
         address _receiver,
         uint256 _stakeAmount
     )
@@ -105,11 +104,7 @@ contract FarmingVaultManager is
             revert InvalidFarmingVault(vault);
         }
 
-        if (msg.sender != _owner) {
-            revert InvalidFarmingOwner(_owner, msg.sender);
-        }
-
-        return IFarmingVault(vault).claimAndStake(_owner, _receiver, _stakeAmount);
+        return IFarmingVault(vault).claimAndStake(msg.sender, _receiver, _stakeAmount);
     }
 
     function isValidFarmingVault(address vault) public view returns (bool) {
