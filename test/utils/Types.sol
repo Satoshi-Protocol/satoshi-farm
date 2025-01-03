@@ -9,8 +9,7 @@ struct Config {
     uint256 claimStartTime;
     uint256 claimEndTime;
     uint256 maxAsset;
+    uint256 penaltyRatio;
     // asset config
     uint8 assetDecimals;
-    // farming vault manager config
-    uint256 refundRatio;
 }

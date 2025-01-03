@@ -6,6 +6,7 @@ import { Deployers } from "./Deployers.sol";
 import { TestBase } from "./TestBase.sol";
 import { Config } from "./Types.sol";
 
+import { FarmingVaultConfig } from "../../src/interfaces/IFarmingVault.sol";
 import { RewardConfig } from "../../src/interfaces/ITimeBasedRewardVault.sol";
 import { VaultConfig } from "../../src/interfaces/IVault.sol";
 import { VaultTestBase } from "./VaultTestBase.sol";
@@ -16,8 +17,9 @@ contract VaultTest is Deployers, ConfigBase, VaultTestBase {
         vm.startPrank(admin);
         asset = deployToken("Asset", "ASSET", config.assetDecimals);
         gold = deployGold();
-        manager = deployFarmingVaultManager(gold, config.refundRatio);
+        manager = deployFarmingVaultManager(gold);
 
+        FarmingVaultConfig memory farmingVaultConfig = FarmingVaultConfig({ penaltyRatio: config.penaltyRatio });
         RewardConfig memory rewardConfig = RewardConfig({
             startTime: config.startTime,
             endTime: config.endTime,
@@ -28,9 +30,9 @@ contract VaultTest is Deployers, ConfigBase, VaultTestBase {
         VaultConfig memory vaultConfig = VaultConfig({ maxAsset: config.maxAsset });
 
         goldFarmingVault = createGoldFarmingVault(gold);
-        setupFarmingVault(address(goldFarmingVault), rewardConfig, vaultConfig);
+        setupFarmingVault(address(goldFarmingVault), farmingVaultConfig, vaultConfig, rewardConfig);
         farmingVault = createFarmingVault(asset, gold, address(goldFarmingVault));
-        setupFarmingVault(address(farmingVault), rewardConfig, vaultConfig);
+        setupFarmingVault(address(farmingVault), farmingVaultConfig, vaultConfig, rewardConfig);
         gold.setAuthorized(address(manager), true);
         deal(address(asset), user_1, 1e5 * 10 ** config.assetDecimals);
         deal(address(asset), user_2, 1e5 * 10 ** config.assetDecimals);

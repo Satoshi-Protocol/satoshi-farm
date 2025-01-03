@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+import { FarmingVaultConfig } from "./IFarmingVault.sol";
 import { RewardConfig } from "./ITimeBasedRewardVault.sol";
 import { VaultConfig } from "./IVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-
-struct FarmingVaultGlobalConfig {
-    uint256 refundRatio;
-}
 
 interface IFarmingVaultManager {
     error InvalidFarmingVault(address vault);
@@ -27,14 +24,11 @@ interface IFarmingVaultManager {
 
     function updateFarmingVaultConfig(
         address vault,
-        VaultConfig memory _config,
+        FarmingVaultConfig memory _config,
+        VaultConfig memory _vaultConfig,
         RewardConfig memory _rewardConfig
     )
         external;
 
     function isValidFarmingVault(address vault) external view returns (bool);
-
-    function getGlobalConfig() external view returns (FarmingVaultGlobalConfig memory);
-
-    function setGlobalConfig(FarmingVaultGlobalConfig memory _globalConfig) external;
 }

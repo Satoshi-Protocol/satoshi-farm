@@ -13,7 +13,7 @@ import { IVault, VaultConfig } from "../../src/interfaces/IVault.sol";
 import { IVaultManager } from "../../src/interfaces/IVaultManager.sol";
 
 import { FarmingVaultConfig, IFarmingVault } from "../../src/interfaces/IFarmingVault.sol";
-import { FarmingVaultGlobalConfig, IFarmingVaultManager } from "../../src/interfaces/IFarmingVaultManager.sol";
+import { IFarmingVaultManager } from "../../src/interfaces/IFarmingVaultManager.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Test } from "forge-std/Test.sol";
@@ -34,17 +34,10 @@ contract Deployers is Test {
     IFarmingVault public goldFarmingVault;
     IFarmingVault public farmingVault;
 
-    function deployFarmingVaultManager(
-        IPointToken _token,
-        uint256 _refundRatio
-    )
-        public
-        returns (IFarmingVaultManager)
-    {
+    function deployFarmingVaultManager(IPointToken _token) public returns (IFarmingVaultManager) {
         assert(address(_token) != address(0));
         managerImpl = address(new FarmingVaultManager());
-        bytes memory data =
-            abi.encodeCall(FarmingVaultManager.initialize, (_token, FarmingVaultGlobalConfig(_refundRatio)));
+        bytes memory data = abi.encodeCall(FarmingVaultManager.initialize, (_token));
         manager = IFarmingVaultManager(address(new ERC1967Proxy(address(managerImpl), data)));
         return manager;
     }
@@ -68,13 +61,14 @@ contract Deployers is Test {
 
     function setupFarmingVault(
         address _vault,
-        RewardConfig memory _rewardConfig,
-        VaultConfig memory _vaultConfig
+        FarmingVaultConfig memory _farmingVaultConfig,
+        VaultConfig memory _vaultConfig,
+        RewardConfig memory _rewardConfig
     )
         public
     {
         assert(address(_vault) != address(0));
-        manager.updateFarmingVaultConfig(_vault, _vaultConfig, _rewardConfig);
+        manager.updateFarmingVaultConfig(_vault, _farmingVaultConfig, _vaultConfig, _rewardConfig);
     }
 
     function deployToken(string memory _name, string memory _symbol, uint8 _decimals) public returns (IERC20) {

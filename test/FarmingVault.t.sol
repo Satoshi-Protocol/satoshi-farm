@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import { IFarmingVault } from "../src/interfaces/IFarmingVault.sol";
-import { FarmingVaultGlobalConfig, IFarmingVaultManager } from "../src/interfaces/IFarmingVaultManager.sol";
+import { FarmingVaultConfig, IFarmingVault } from "../src/interfaces/IFarmingVault.sol";
+import { IFarmingVaultManager } from "../src/interfaces/IFarmingVaultManager.sol";
 
 import { IRewardManager } from "../src/interfaces/IRewardManager.sol";
 import { IRewardVault } from "../src/interfaces/IRewardVault.sol";
@@ -18,13 +18,15 @@ import { IERC20Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.
 
 contract FarmingVaultTest is VaultTest {
     function test_only_manager_can_call_functions() public {
+        FarmingVaultConfig memory farmingVaultConfig = FarmingVaultConfig({ penaltyRatio: 1000 });
+        VaultConfig memory config = VaultConfig({ maxAsset: 1000 });
+        RewardConfig memory rewardConfig =
+            RewardConfig({ claimStartTime: 1000, claimEndTime: 1000, rewardRate: 1000, startTime: 1000, endTime: 1000 });
+
         vm.expectPartialRevert(IFarmingVault.InvalidFarmingVaultManager.selector);
         farmingVault.claimAndStake(user_1, user_1, 1000);
         vm.expectPartialRevert(IFarmingVault.InvalidFarmingVaultManager.selector);
-        farmingVault.updateFarmingVaultConfig(
-            VaultConfig({ maxAsset: 1000 }),
-            RewardConfig({ claimStartTime: 1000, claimEndTime: 1000, rewardRate: 1000, startTime: 1000, endTime: 1000 })
-        );
+        farmingVault.updateFarmingVaultConfig(farmingVaultConfig, config, rewardConfig);
 
         IRewardVault rewardVault = IRewardVault(address(farmingVault));
         vm.expectPartialRevert(IRewardVault.InvalidRewardManager.selector);
@@ -40,16 +42,13 @@ contract FarmingVaultTest is VaultTest {
     }
 
     function test_only_admin_can_call_functions() public {
-        FarmingVaultGlobalConfig memory globalConfig = FarmingVaultGlobalConfig({ refundRatio: 1000 });
+        FarmingVaultConfig memory farmingVaultConfig = FarmingVaultConfig({ penaltyRatio: 1000 });
         VaultConfig memory config = VaultConfig({ maxAsset: 1000 });
         RewardConfig memory rewardConfig =
             RewardConfig({ claimStartTime: 1000, claimEndTime: 1000, rewardRate: 1000, startTime: 1000, endTime: 1000 });
 
         vm.expectPartialRevert(IFarmingVaultManager.InvalidAdmin.selector);
-        manager.setGlobalConfig(globalConfig);
-
-        vm.expectPartialRevert(IFarmingVaultManager.InvalidAdmin.selector);
-        manager.updateFarmingVaultConfig(address(farmingVault), config, rewardConfig);
+        manager.updateFarmingVaultConfig(address(farmingVault), farmingVaultConfig, config, rewardConfig);
 
         IVaultManager vaultManager = IVaultManager(address(manager));
         vm.expectPartialRevert(IFarmingVaultManager.InvalidAdmin.selector);

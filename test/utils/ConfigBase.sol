@@ -17,7 +17,7 @@ contract ConfigBase {
             claimEndTime: 1000,
             maxAsset: 1e20,
             assetDecimals: 18,
-            refundRatio: 50 * 1_000_000 / 100
+            penaltyRatio: 50 * 1_000_000 / 100
         });
     }
 }

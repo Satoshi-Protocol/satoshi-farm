@@ -6,8 +6,8 @@ import { FarmingVault } from "./FarmingVault.sol";
 import { RewardManager } from "./core/reward-vault/RewardManager.sol";
 import { VaultManager } from "./core/vault/VaultManager.sol";
 
-import { IFarmingVault } from "./interfaces/IFarmingVault.sol";
-import { FarmingVaultGlobalConfig, IFarmingVaultManager } from "./interfaces/IFarmingVaultManager.sol";
+import { FarmingVaultConfig, IFarmingVault } from "./interfaces/IFarmingVault.sol";
+import { IFarmingVaultManager } from "./interfaces/IFarmingVaultManager.sol";
 import { IPointToken } from "./interfaces/IPointToken.sol";
 import { RewardConfig } from "./interfaces/ITimeBasedRewardVault.sol";
 import { VaultConfig } from "./interfaces/IVault.sol";
@@ -27,17 +27,15 @@ contract FarmingVaultManager is
     UUPSUpgradeable
 {
     mapping(address => bool) public validVaults;
-    FarmingVaultGlobalConfig public globalConfig;
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 
-    function initialize(IPointToken rewardToken, FarmingVaultGlobalConfig memory _globalConfig) external initializer {
+    function initialize(IPointToken rewardToken) external initializer {
         __Ownable_init(msg.sender);
         __Pausable_init();
         __UUPSUpgradeable_init();
         __VaultManager__init(rewardToken);
         __RewardManager__init(rewardToken);
-        globalConfig = _globalConfig;
     }
 
     // --- onlyOwner functions ---
@@ -47,10 +45,6 @@ contract FarmingVaultManager is
 
     function resume() external onlyOwner {
         _unpause();
-    }
-
-    function setGlobalConfig(FarmingVaultGlobalConfig memory _globalConfig) external onlyAdmin {
-        globalConfig = _globalConfig;
     }
 
     function createVault(
@@ -82,13 +76,14 @@ contract FarmingVaultManager is
 
     function updateFarmingVaultConfig(
         address vault,
-        VaultConfig memory _config,
+        FarmingVaultConfig memory _farmingVaultConfig,
+        VaultConfig memory _vaultConfig,
         RewardConfig memory _rewardConfig
     )
         external
         onlyAdmin
     {
-        IFarmingVault(vault).updateFarmingVaultConfig(_config, _rewardConfig);
+        IFarmingVault(vault).updateFarmingVaultConfig(_farmingVaultConfig, _vaultConfig, _rewardConfig);
     }
 
     // --- public functions ---
@@ -113,10 +108,6 @@ contract FarmingVaultManager is
 
     function isValidVault(address vault) public view override(RewardManager, VaultManager) returns (bool) {
         return validVaults[vault];
-    }
-
-    function getGlobalConfig() external view returns (FarmingVaultGlobalConfig memory) {
-        return globalConfig;
     }
 
     function admin() public view override(RewardManager, VaultManager) returns (address) {

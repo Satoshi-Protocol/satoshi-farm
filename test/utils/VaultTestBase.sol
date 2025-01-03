@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+import { IFarmingVault } from "../../src/interfaces/IFarmingVault.sol";
 import { IFarmingVaultManager } from "../../src/interfaces/IFarmingVaultManager.sol";
 import { IRewardManager } from "../../src/interfaces/IRewardManager.sol";
 import { ITimeBasedRewardVault, RewardConfig } from "../../src/interfaces/ITimeBasedRewardVault.sol";
@@ -68,18 +69,16 @@ contract VaultTestBase is TestBase {
         public
         returns (uint256, uint256)
     {
-        IFarmingVaultManager farmingVaultManager = IFarmingVaultManager(manager);
-
         uint256 rewardAmount = computeReward(vault, user);
-        uint256 refundAmount =
-            computeRefundAmount(farmingVaultManager.getGlobalConfig().refundRatio, stakeAmount, rewardAmount);
+        uint256 penaltyAmount =
+            computePenaltyAmount(IFarmingVault(vault).getFarmingVaultConfig().penaltyRatio, stakeAmount, rewardAmount);
         uint256 balanceBefore = IERC20(reward).balanceOf(user);
         vm.startPrank(user);
         (uint256 claimed, uint256 staked) = IFarmingVaultManager(manager).claimAndStake(vault, user, stakeAmount);
         vm.stopPrank();
         checkBalance(IERC20(reward), user, balanceBefore + claimed);
         assertEq(staked, stakeAmount);
-        assertEq(claimed, refundAmount);
+        assertEq(claimed, rewardAmount - stakeAmount - penaltyAmount);
         return (claimed, staked);
     }
 
@@ -101,8 +100,8 @@ contract VaultTestBase is TestBase {
         return expectedReward;
     }
 
-    function computeRefundAmount(
-        uint256 refundRatio,
+    function computePenaltyAmount(
+        uint256 penaltyRatio,
         uint256 stakeAmount,
         uint256 rewardAmount
     )
@@ -111,6 +110,6 @@ contract VaultTestBase is TestBase {
         returns (uint256)
     {
         uint256 toClaimAmount = rewardAmount - stakeAmount;
-        return FarmingVaultMath.computeRefundAmount(refundRatio, toClaimAmount);
+        return FarmingVaultMath.computePenaltyAmount(penaltyRatio, toClaimAmount);
     }
 }

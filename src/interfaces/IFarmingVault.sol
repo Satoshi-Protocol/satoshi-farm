@@ -7,8 +7,7 @@ import { RewardConfig } from "./ITimeBasedRewardVault.sol";
 import { IVault, VaultConfig } from "./IVault.sol";
 
 struct FarmingVaultConfig {
-    uint256 claimStartTime;
-    uint256 maxAsset;
+    uint256 penaltyRatio;
 }
 
 interface IFarmingVault {
@@ -17,10 +16,15 @@ interface IFarmingVault {
     error NotSupportClaimAndStake();
 
     event RewardStaked(address indexed rewardToken, address indexed owner, uint256 amount);
-    event RewardRefunded(address indexed rewardToken, address indexed owner, uint256 amount);
-    event RewardBurned(address indexed rewardToken, address indexed owner, uint256 amount);
+    event RewardPenalised(address indexed rewardToken, address indexed owner, uint256 amount);
+    event RewardClaimed(address indexed rewardToken, address indexed owner, uint256 amount);
 
-    function updateFarmingVaultConfig(VaultConfig memory _config, RewardConfig memory _rewardConfig) external;
+    function updateFarmingVaultConfig(
+        FarmingVaultConfig memory _config,
+        VaultConfig memory _vaultConfig,
+        RewardConfig memory _rewardConfig
+    )
+        external;
 
     function claimAndStake(
         address _owner,
@@ -29,4 +33,6 @@ interface IFarmingVault {
     )
         external
         returns (uint256, uint256);
+
+    function getFarmingVaultConfig() external view returns (FarmingVaultConfig memory);
 }

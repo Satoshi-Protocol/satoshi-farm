@@ -51,14 +51,15 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
 
     // --- manager functions ---
     function updateFarmingVaultConfig(
-        VaultConfig memory _config,
+        FarmingVaultConfig memory _config,
+        VaultConfig memory _vaultConfig,
         RewardConfig memory _rewardConfig
     )
         public
-        override
         onlyFarmingVaultManager
     {
-        updateConfig(_config);
+        farmingVaultConfig = _config;
+        updateConfig(_vaultConfig);
         updateRewardConfig(_rewardConfig);
     }
 
@@ -93,8 +94,8 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
             return (0, rewardAmount);
         }
         _stakeReward(_stakeAmount, _receiver);
-        uint256 refundAmount = _refundReward(rewardAmount - _stakeAmount, _owner);
-        return (refundAmount, _stakeAmount);
+        (uint256 claimAmount,) = _penalise(rewardAmount - _stakeAmount, _owner);
+        return (claimAmount, _stakeAmount);
     }
 
     // --- public functions ---
@@ -110,6 +111,10 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
         return Ownable(address(vaultManager)).owner();
     }
 
+    function getFarmingVaultConfig() public view returns (FarmingVaultConfig memory) {
+        return farmingVaultConfig;
+    }
+
     // --- internal functions ---
     function _isGoldFarmingVault() internal view returns (bool) {
         return address(goldFarmingVault) == address(0);
@@ -122,14 +127,15 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
         return shares;
     }
 
-    function _refundReward(uint256 _amount, address _receiver) internal returns (uint256) {
-        uint256 refundRatio = farmingVaultManager.getGlobalConfig().refundRatio;
-        uint256 refundAmount = FarmingVaultMath.computeRefundAmount(refundRatio, _amount);
-        IERC20(reward()).safeTransfer(_receiver, refundAmount);
-        emit RewardRefunded(reward(), _receiver, refundAmount);
-        _burnReward(_amount - refundAmount);
-        emit RewardBurned(reward(), _receiver, _amount - refundAmount);
-        return refundAmount;
+    function _penalise(uint256 _amount, address _receiver) internal returns (uint256, uint256) {
+        uint256 penaltyRatio = farmingVaultConfig.penaltyRatio;
+        uint256 penaltyAmount = FarmingVaultMath.computePenaltyAmount(penaltyRatio, _amount);
+        uint256 claimAmount = _amount - penaltyAmount;
+        IERC20(reward()).safeTransfer(_receiver, claimAmount);
+        emit RewardClaimed(reward(), _receiver, claimAmount);
+        _burnReward(penaltyAmount);
+        emit RewardPenalised(reward(), _receiver, penaltyAmount);
+        return (claimAmount, penaltyAmount);
     }
 
     function _burnReward(uint256 _amount) internal returns (uint256) {
