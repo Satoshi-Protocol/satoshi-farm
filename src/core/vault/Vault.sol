@@ -10,20 +10,20 @@ import { IVaultDepositAssetCallback } from "../../interfaces/callbacks/IVaultDep
 import { RewardVault } from "../reward-vault/RewardVault.sol";
 import { TimeBasedRewardVault } from "../reward-vault/TimeBasedRewardVault.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
-import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { ERC4626Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Vault is Initializable, IVault, ERC4626Upgradeable {
+contract Vault is Initializable, IVault {
+    using SafeERC20 for IERC20;
+
     IERC20 public underlyingAsset;
     IVaultManager public vaultManager;
     VaultConfig public vaultConfig;
 
+    mapping(address => uint256) public assets;
+    uint256 public totalAssets;
+
     function __Vault__init(IERC20 _underlyingAsset, address _vaultManager) internal onlyInitializing {
-        __ERC4626_init(_underlyingAsset);
         underlyingAsset = _underlyingAsset;
         vaultManager = IVaultManager(_vaultManager);
     }
@@ -38,27 +38,11 @@ contract Vault is Initializable, IVault, ERC4626Upgradeable {
         onlyVaultManager
         returns (uint256)
     {
-        if (totalAssets() + _assets > vaultConfig.maxAsset) {
-            revert MaxAssetExceeded(totalAssets() + _assets, vaultConfig.maxAsset);
+        if (_assets > maxDeposit(_depositor)) {
+            revert MaxDeposit(_assets, maxDeposit(_depositor));
         }
         uint256 shares = _deposit(_assets, _depositor, _receiver);
         return shares;
-    }
-
-    function deposit(
-        uint256 _assets,
-        address _receiver
-    )
-        public
-        virtual
-        override(ERC4626Upgradeable, IERC4626)
-        onlyVaultManager
-        returns (uint256)
-    {
-        if (totalAssets() + _assets > vaultConfig.maxAsset) {
-            revert MaxAssetExceeded(totalAssets() + _assets, vaultConfig.maxAsset);
-        }
-        return _deposit(_assets, msg.sender, _receiver);
     }
 
     function withdraw(
@@ -68,18 +52,14 @@ contract Vault is Initializable, IVault, ERC4626Upgradeable {
     )
         public
         virtual
-        override(ERC4626Upgradeable, IVault)
         onlyVaultManager
         returns (uint256)
     {
-        uint256 maxAssets = maxWithdraw(_owner);
-        if (_amount > maxAssets) {
-            revert ERC4626ExceededMaxWithdraw(_owner, _amount, maxAssets);
+        if (_amount > maxWithdraw(_owner)) {
+            revert MaxWithdraw(_amount, maxWithdraw(_owner));
         }
 
-        uint256 shares = previewWithdraw(_amount);
-        _withdraw(_owner, _receiver, _owner, _amount, shares);
-        return shares;
+        return _withdraw(_owner, _receiver, _amount);
     }
 
     function updateConfig(VaultConfig memory _config) public override onlyVaultManager {
@@ -87,16 +67,24 @@ contract Vault is Initializable, IVault, ERC4626Upgradeable {
     }
 
     // --- public functions ---
-    function asset() public view virtual override(ERC4626Upgradeable, IVault) returns (address) {
-        return super.asset();
-    }
-
-    function totalAssets() public view virtual override(ERC4626Upgradeable, IVault) returns (uint256) {
-        return super.totalAssets();
+    function asset() public view virtual override returns (address) {
+        return address(underlyingAsset);
     }
 
     function config() public view override returns (VaultConfig memory) {
         return vaultConfig;
+    }
+
+    function maxDeposit(address) public view returns (uint256) {
+        return vaultConfig.maxAsset - totalAssets;
+    }
+
+    function maxWithdraw(address _owner) public view returns (uint256) {
+        return assets[_owner];
+    }
+
+    function assetBalance() public view returns (uint256) {
+        return underlyingAsset.balanceOf(address(this));
     }
 
     // internal functions
@@ -105,27 +93,42 @@ contract Vault is Initializable, IVault, ERC4626Upgradeable {
         return shares;
     }
 
-    function _depositAsset(address _depositor, address _receiver, uint256 _amount) internal returns (uint256) {
-        uint256 maxAssets = maxDeposit(_receiver);
-        if (_amount > maxAssets) {
-            revert ERC4626ExceededMaxDeposit(_receiver, _amount, maxAssets);
-        }
-        uint256 shares = previewDeposit(_amount);
+    function _withdraw(address _owner, address _receiver, uint256 _amount) internal virtual returns (uint256) {
+        _withdrawAsset(_owner, _receiver, _amount);
+        return _amount;
+    }
 
-        uint256 balanceBefore = totalAssets();
+    function _depositAsset(address _depositor, address _receiver, uint256 _amount) internal returns (uint256) {
+        uint256 balanceBefore = assetBalance();
         IVaultDepositAssetCallback(address(vaultManager)).vaultDepositAssetCallback(
             address(asset()), _depositor, _amount, ""
         );
-        uint256 balanceAfter = totalAssets();
+        uint256 balanceAfter = assetBalance();
         uint256 balanceChange = balanceAfter - balanceBefore;
         if (balanceChange != _amount) {
             revert AssetBalanceChangedUnexpectedly(_amount, balanceChange);
         }
 
-        _mint(_receiver, shares);
+        _updateAsset(_depositor, _amount, true);
 
-        emit Deposit(_msgSender(), _receiver, _amount, shares);
-        return shares;
+        emit Deposit(_amount, _receiver, _depositor);
+        return _amount;
+    }
+
+    function _withdrawAsset(address _owner, address _receiver, uint256 _amount) internal {
+        underlyingAsset.safeTransfer(_receiver, _amount);
+        _updateAsset(_owner, _amount, false);
+        emit Withdraw(_amount, _receiver, _owner);
+    }
+
+    function _updateAsset(address _owner, uint256 _amount, bool _add) internal {
+        if (_add) {
+            assets[_owner] += _amount;
+            totalAssets += _amount;
+        } else {
+            assets[_owner] -= _amount;
+            totalAssets -= _amount;
+        }
     }
 
     modifier onlyVaultManager() {
@@ -133,22 +136,5 @@ contract Vault is Initializable, IVault, ERC4626Upgradeable {
             revert InvalidVaultManager(msg.sender, address(vaultManager));
         }
         _;
-    }
-
-    // ---disable functions---
-    function transfer(address, uint256) public pure override(ERC20Upgradeable, IERC20) returns (bool) {
-        revert("Vault: Not allowed");
-    }
-
-    function transferFrom(address, address, uint256) public pure override(ERC20Upgradeable, IERC20) returns (bool) {
-        revert("Vault: Not allowed");
-    }
-
-    function redeem(uint256, address, address) public pure override(ERC4626Upgradeable, IERC4626) returns (uint256) {
-        revert("Vault: Not allowed");
-    }
-
-    function mint(uint256, address) public pure override(ERC4626Upgradeable, IERC4626) returns (uint256) {
-        revert("Vault: Not allowed");
     }
 }

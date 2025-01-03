@@ -8,7 +8,7 @@ struct VaultConfig {
     uint256 maxAsset;
 }
 
-interface IVault is IERC4626 {
+interface IVault {
     error InvalidAsset();
     error InvalidStrategy();
     error InvalidAmount();
@@ -17,9 +17,10 @@ interface IVault is IERC4626 {
     error InvalidOwner(address caller, address owner);
     error AssetBalanceChangedUnexpectedly(uint256 expected, uint256 actual);
     error InsufficientAssetBalance(uint256 expected, uint256 actual);
-    error MaxAssetExceeded(uint256 amount, uint256 maxAsset);
+    error MaxDeposit(uint256 amount, uint256 maxDeposit);
+    error MaxWithdraw(uint256 amount, uint256 maxWithdraw);
 
-    event Deposit(uint256 assets, address receiver);
+    event Deposit(uint256 assets, address receiver, address depositor);
     event Withdraw(uint256 assets, address receiver, address owner);
 
     function deposit(uint256 assets, address depositor, address receiver) external returns (uint256);

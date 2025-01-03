@@ -17,18 +17,6 @@ import { VaultTest } from "./utils/VaultTest.sol";
 import { IERC20Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract FarmingVaultTest is VaultTest {
-    function test_disable_functions() public {
-        IVault vault = IVault(address(farmingVault));
-        vm.expectRevert("Vault: Not allowed");
-        vault.transfer(user_1, 100);
-        vm.expectRevert("Vault: Not allowed");
-        vault.transferFrom(user_1, user_2, 100);
-        vm.expectRevert("Vault: Not allowed");
-        vault.redeem(100, user_1, user_1);
-        vm.expectRevert("Vault: Not allowed");
-        vault.mint(100, user_1);
-    }
-
     function test_only_manager_can_call_functions() public {
         vm.expectPartialRevert(IFarmingVault.InvalidFarmingVaultManager.selector);
         farmingVault.claimAndStake(user_1, user_1, 1000);
@@ -45,8 +33,6 @@ contract FarmingVaultTest is VaultTest {
         IVault vault = IVault(address(farmingVault));
         vm.expectPartialRevert(IVault.InvalidVaultManager.selector);
         vault.deposit(100, user_1, user_1);
-        vm.expectPartialRevert(IVault.InvalidVaultManager.selector);
-        vault.deposit(100, user_1);
         vm.expectPartialRevert(IVault.InvalidVaultManager.selector);
         vault.withdraw(100, user_1, user_1);
         vm.expectPartialRevert(IVault.InvalidVaultManager.selector);
@@ -109,7 +95,7 @@ contract FarmingVaultTest is VaultTest {
         vm.assume(amount <= asset.balanceOf(user_1));
         vm.startPrank(user_1);
         asset.approve(address(manager), amount);
-        vm.expectPartialRevert(IVault.MaxAssetExceeded.selector);
+        vm.expectPartialRevert(IVault.MaxDeposit.selector);
         IVaultManager(address(manager)).deposit(amount, address(farmingVault), user_1);
         vm.stopPrank();
     }

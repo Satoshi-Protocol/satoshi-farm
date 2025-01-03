@@ -25,7 +25,7 @@ contract GoldFarmingVaultTest is VaultTest {
         vm.assume(amount <= gold.balanceOf(user_1));
         vm.startPrank(user_1);
         gold.approve(address(manager), amount);
-        vm.expectPartialRevert(IVault.MaxAssetExceeded.selector);
+        vm.expectPartialRevert(IVault.MaxDeposit.selector);
         IVaultManager(address(manager)).deposit(amount, address(goldFarmingVault), user_1);
         vm.stopPrank();
     }

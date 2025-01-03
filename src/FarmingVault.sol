@@ -40,7 +40,6 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
         public
         initializer
     {
-        __ERC4626_init(_asset);
         __TimeBasedRewardVault__init(_reward, _vaultManager);
         __Vault__init(_asset, _vaultManager);
         __UUPSUpgradeable_init();
@@ -100,11 +99,11 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
 
     // --- public functions ---
     function totalShares() public view override(RewardVault, IRewardVault) returns (uint256) {
-        return totalSupply();
+        return totalAssets;
     }
 
     function userShares(address user) public view override(RewardVault, IRewardVault) returns (uint256) {
-        return balanceOf(user);
+        return assets[user];
     }
 
     function owner() public view returns (address) {
