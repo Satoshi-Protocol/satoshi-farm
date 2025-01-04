@@ -6,7 +6,6 @@ import { IVaultManager } from "../../interfaces/IVaultManager.sol";
 
 import { IVaultDepositAssetCallback } from "../../interfaces/callbacks/IVaultDepositAssetCallback.sol";
 
-import { IPointToken } from "../../interfaces/IPointToken.sol";
 import { RewardManager } from "../reward-vault/RewardManager.sol";
 import { Vault } from "./Vault.sol";
 
@@ -18,11 +17,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 abstract contract VaultManager is Initializable, IVaultManager {
     using SafeERC20 for IERC20;
 
-    IPointToken public underlyingPointToken;
-
-    function __VaultManager__init(IPointToken _underlyingPointToken) internal onlyInitializing {
-        underlyingPointToken = _underlyingPointToken;
-    }
+    function __VaultManager__init() internal onlyInitializing { }
 
     // --- admin functions ---
     function updateConfig(address _vault, VaultConfig memory _config) public onlyAdmin {
@@ -56,7 +51,6 @@ abstract contract VaultManager is Initializable, IVaultManager {
         if (!verifyCallback()) {
             revert InvalidCallbackCaller(msg.sender);
         }
-        // TODO: use safeTransferFrom
         IERC20(_asset).safeTransferFrom(_depositor, address(msg.sender), _amount);
     }
 

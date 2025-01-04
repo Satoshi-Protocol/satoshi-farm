@@ -34,7 +34,7 @@ contract FarmingVaultManager is
         __Ownable_init(msg.sender);
         __Pausable_init();
         __UUPSUpgradeable_init();
-        __VaultManager__init(rewardToken);
+        __VaultManager__init();
         __RewardManager__init(rewardToken);
     }
 
