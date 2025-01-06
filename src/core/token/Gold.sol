@@ -32,7 +32,9 @@ contract Gold is ERC20Upgradeable, OwnableUpgradeable, UUPSUpgradeable, IPointTo
     }
 
     function burn(address from, uint256 amount) external override {
-        require(authorized[msg.sender], "Gold: Not authorized");
+        if (msg.sender != from) {
+            revert("Gold: Not authorized");
+        }
         _burn(from, amount);
     }
 

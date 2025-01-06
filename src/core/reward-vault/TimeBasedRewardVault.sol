@@ -2,39 +2,45 @@
 pragma solidity ^0.8.26;
 
 import { IRewardVault } from "../../interfaces/IRewardVault.sol";
-import { ITimeBasedRewardVault, RewardConfig, UserRewardInfo } from "../../interfaces/ITimeBasedRewardVault.sol";
+import { ITimeBasedRewardVault, RewardConfig } from "../../interfaces/ITimeBasedRewardVault.sol";
 import { IRewardVaultMintCallback } from "../../interfaces/callbacks/IRewardVaultMintCallback.sol";
 
 import { RewardVaultMath } from "../../libraries/RewardVaultMath.sol";
 import { RewardVault } from "./RewardVault.sol";
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
-    event UpdatePendingReward(address indexed user, uint256 amount, uint256 timestamp);
-
+abstract contract TimeBasedRewardVault is Initializable, ITimeBasedRewardVault, RewardVault {
     RewardConfig public rewardConfig;
     uint256 public lastRewardPerToken;
     uint256 public lastUpdateTime;
-    mapping(address => UserRewardInfo) public userRewards;
+    mapping(address => uint256) public userLastRewardPerToken;
     mapping(address => uint256) public pendingRewards;
 
-    function updateRewardConfig(RewardConfig memory _config) public {
+    function __TimeBasedRewardVault__init(IERC20 _reward, address _rewardManager) internal onlyInitializing {
+        __RewardVault__init(_reward, _rewardManager);
+    }
+
+    // RewardManager
+    function updateRewardConfig(RewardConfig memory _config) public override onlyRewardManager {
         rewardConfig = _config;
         emit UpdateRewardConfig(_config);
     }
 
-    function previewReward(address _user) public view override returns (uint256) {
-        UserRewardInfo memory userReward = userRewards[_user];
-        uint256 rewardPerToken = _computeLatestRewardPerToken(
-            rewardConfig.rewardRate,
-            _computeInterval(lastUpdateTime, rewardConfig.startTime, rewardConfig.endTime),
-            totalShares()
-        );
-        uint256 rewardAmount = _computeReward(rewardConfig, userReward, rewardPerToken);
-        return rewardAmount + pendingRewards[_user];
-    }
-
-    function claimReward(address _owner, address _recipient) public override returns (uint256) {
+    function claimReward(
+        address _owner,
+        address _recipient
+    )
+        public
+        virtual
+        override
+        onlyRewardManager
+        returns (uint256)
+    {
+        if (block.timestamp < rewardConfig.claimStartTime) {
+            revert ClaimNotStarted(block.timestamp, rewardConfig.claimStartTime);
+        }
         _updateReward(_owner);
         uint256 pendingReward = pendingRewards[_owner];
         if (pendingReward > 0) {
@@ -43,6 +49,18 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
             pendingRewards[_owner] = 0;
         }
         return pendingReward;
+    }
+
+    // Public
+    function previewReward(address _user) public view override returns (uint256) {
+        uint256 rewardPerToken = _computeLatestRewardPerToken(
+            rewardConfig.rewardRate,
+            _computeInterval(lastUpdateTime, rewardConfig.startTime, rewardConfig.endTime),
+            totalShares()
+        );
+        uint256 rewardAmount =
+            _computeReward(rewardConfig, userShares(_user), rewardPerToken, userLastRewardPerToken[_user]);
+        return rewardAmount + pendingRewards[_user];
     }
 
     function getRewardConfig() public view returns (RewardConfig memory) {
@@ -57,17 +75,19 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
         return lastUpdateTime;
     }
 
-    function getUserRewardInfo(address _user) public view returns (UserRewardInfo memory) {
-        return userRewards[_user];
+    function getUserLastRewardPerToken(address _user) public view returns (uint256) {
+        return userLastRewardPerToken[_user];
     }
 
     function getPendingReward(address _user) public view returns (uint256) {
         return pendingRewards[_user];
     }
 
+    // Internal
     function _updateReward(address _user) internal returns (uint256) {
         uint256 rewardPerToken = _updateRewardPerToken();
-        uint256 rewardAmount = _computeReward(rewardConfig, userRewards[_user], rewardPerToken);
+        uint256 rewardAmount =
+            _computeReward(rewardConfig, userShares(_user), rewardPerToken, userLastRewardPerToken[_user]);
         _updateUserRewardPerToken(_user, rewardPerToken);
         pendingRewards[_user] += rewardAmount;
         emit UpdatePendingReward(_user, rewardAmount, block.timestamp);
@@ -76,8 +96,9 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
 
     function _computeReward(
         RewardConfig memory _config,
-        UserRewardInfo memory _userReward,
-        uint256 _rewardPerToken
+        uint256 _amount,
+        uint256 _rewardPerToken,
+        uint256 _lastRewardPerToken
     )
         internal
         view
@@ -90,8 +111,7 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
         if (currentTime < _config.startTime) {
             return 0;
         }
-        uint256 rewardAmount =
-            RewardVaultMath.computeReward(_userReward.amount, _rewardPerToken, _userReward.lastRewardPerToken);
+        uint256 rewardAmount = RewardVaultMath.computeReward(_amount, _rewardPerToken, _lastRewardPerToken);
         return rewardAmount;
     }
 
@@ -120,11 +140,9 @@ abstract contract TimeBasedRewardVault is ITimeBasedRewardVault, RewardVault {
     }
 
     function _updateUserRewardPerToken(address _user, uint256 _rewardPerToken) internal {
-        userRewards[_user].lastRewardPerToken = _rewardPerToken;
+        userLastRewardPerToken[_user] = _rewardPerToken;
         emit UpdateUserRewardPerToken(_user, _rewardPerToken, block.timestamp);
     }
-
-    function _claimReward(address _user, address _recipient, uint256 _amount) internal virtual returns (uint256);
 
     function _computeInterval(
         uint256 _lastUpdateTime,
