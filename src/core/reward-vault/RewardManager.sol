@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IPointToken } from "../../interfaces/IPointToken.sol";
 import { IRewardManager } from "../../interfaces/IRewardManager.sol";
+import { IRewardToken } from "../../interfaces/IRewardToken.sol";
 import { IRewardVault } from "../../interfaces/IRewardVault.sol";
 import { ITimeBasedRewardVault, RewardConfig } from "../../interfaces/ITimeBasedRewardVault.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 abstract contract RewardManager is IRewardManager, Initializable {
-    IPointToken public underlyingReward;
+    IRewardToken public underlyingReward;
 
-    function __RewardManager__init(IPointToken _underlyingReward) internal onlyInitializing {
+    function __RewardManager__init(IRewardToken _underlyingReward) internal onlyInitializing {
         underlyingReward = _underlyingReward;
     }
 

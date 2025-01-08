@@ -6,8 +6,9 @@ import { VaultManager } from "../../src/core/vault/VaultManager.sol";
 
 import { FarmingVaultManager } from "../../src/FarmingVaultManager.sol";
 import { Gold } from "../../src/core/token/Gold.sol";
-import { IPointToken } from "../../src/interfaces/IPointToken.sol";
+
 import { IRewardManager } from "../../src/interfaces/IRewardManager.sol";
+import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
 import { ITimeBasedRewardVault, RewardConfig } from "../../src/interfaces/ITimeBasedRewardVault.sol";
 import { IVault, VaultConfig } from "../../src/interfaces/IVault.sol";
 import { IVaultManager } from "../../src/interfaces/IVaultManager.sol";
@@ -26,7 +27,7 @@ contract Deployers is Test {
 
     IERC20 public asset;
 
-    IPointToken public gold;
+    IRewardToken public gold;
     address public goldImpl;
 
     IFarmingVaultManager public manager;
@@ -34,7 +35,7 @@ contract Deployers is Test {
     IFarmingVault public goldFarmingVault;
     IFarmingVault public farmingVault;
 
-    function deployFarmingVaultManager(IPointToken _token) public returns (IFarmingVaultManager) {
+    function deployFarmingVaultManager(IRewardToken _token) public returns (IFarmingVaultManager) {
         assert(address(_token) != address(0));
         managerImpl = address(new FarmingVaultManager());
         bytes memory data = abi.encodeCall(FarmingVaultManager.initialize, (_token));
@@ -76,14 +77,14 @@ contract Deployers is Test {
         return IERC20(address(token));
     }
 
-    function deployGold() public returns (IPointToken) {
+    function deployGold() public returns (IRewardToken) {
         goldImpl = address(new Gold());
         bytes memory data = abi.encodeCall(Gold.initialize, ());
-        gold = IPointToken(address(new ERC1967Proxy(address(goldImpl), data)));
+        gold = IRewardToken(address(new ERC1967Proxy(address(goldImpl), data)));
         return gold;
     }
 
     function setGoldAuthorized(address _account, bool _authorized) public {
-        IPointToken(address(gold)).setAuthorized(_account, _authorized);
+        IRewardToken(address(gold)).setAuthorized(_account, _authorized);
     }
 }

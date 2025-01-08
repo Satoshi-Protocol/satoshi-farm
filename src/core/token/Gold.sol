@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IPointToken } from "../../interfaces/IPointToken.sol";
+import { IRewardToken } from "../../interfaces/IRewardToken.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-contract Gold is ERC20Upgradeable, OwnableUpgradeable, UUPSUpgradeable, IPointToken {
+contract Gold is ERC20Upgradeable, OwnableUpgradeable, UUPSUpgradeable, IRewardToken {
     // --- Auth ---
     mapping(address => bool) public authorized;
 

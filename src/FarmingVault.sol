@@ -7,8 +7,9 @@ import { Vault } from "./core/vault/Vault.sol";
 import { FarmingVaultConfig, IFarmingVault } from "./interfaces/IFarmingVault.sol";
 
 import { IFarmingVaultManager } from "./interfaces/IFarmingVaultManager.sol";
-import { IPointToken } from "./interfaces/IPointToken.sol";
+
 import { IRewardManager } from "./interfaces/IRewardManager.sol";
+import { IRewardToken } from "./interfaces/IRewardToken.sol";
 import { IRewardVault } from "./interfaces/IRewardVault.sol";
 import { RewardConfig } from "./interfaces/ITimeBasedRewardVault.sol";
 import { IVault, VaultConfig } from "./interfaces/IVault.sol";
@@ -139,7 +140,7 @@ contract FarmingVault is Vault, TimeBasedRewardVault, IFarmingVault, UUPSUpgrade
     }
 
     function _burnReward(uint256 _amount) internal returns (uint256) {
-        IPointToken(reward()).burn(address(this), _amount);
+        IRewardToken(reward()).burn(address(this), _amount);
         return _amount;
     }
 

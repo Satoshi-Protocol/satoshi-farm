@@ -8,7 +8,7 @@ import { VaultManager } from "./core/vault/VaultManager.sol";
 
 import { FarmingVaultConfig, IFarmingVault } from "./interfaces/IFarmingVault.sol";
 import { IFarmingVaultManager } from "./interfaces/IFarmingVaultManager.sol";
-import { IPointToken } from "./interfaces/IPointToken.sol";
+import { IRewardToken } from "./interfaces/IRewardToken.sol";
 import { RewardConfig } from "./interfaces/ITimeBasedRewardVault.sol";
 import { VaultConfig } from "./interfaces/IVault.sol";
 
@@ -30,7 +30,7 @@ contract FarmingVaultManager is
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 
-    function initialize(IPointToken rewardToken) external initializer {
+    function initialize(IRewardToken rewardToken) external initializer {
         __Ownable_init(msg.sender);
         __Pausable_init();
         __UUPSUpgradeable_init();
