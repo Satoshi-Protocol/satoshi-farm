@@ -7,12 +7,45 @@ import { IRewardToken } from "./IRewardToken.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
+struct DepositParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+}
+
+struct WithdrawParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+}
+
+struct RequestClaimParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+}
+
+struct ClaimParams {
+    IFarm farm;
+    uint256 amount;
+    address owner;
+    uint256 claimableTime;
+    bytes32 claimId;
+}
+
+struct ClaimAndStakeParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+}
+
 interface IFarmManager {
     error InvalidFarm(IFarm farm);
     error InvalidAdmin(address expected, address actual);
     error FarmAlreadyExists(IFarm farm);
     error MintRewardTokenFailed(IRewardToken rewardToken, IFarm farm, uint256 amount);
 
+    event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
     event FarmCreated(IFarm indexed farm, IERC20 indexed underlyingAsset, IFarm rewardFarm);
     event Deposit(IFarm indexed farm, uint256 indexed amount, address sender, address receiver);
     event Withdraw(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
@@ -46,22 +79,25 @@ interface IFarmManager {
         external
         returns (address);
 
-    function deposit(IFarm farm, uint256 amount, address receiver) external;
+    function deposit(DepositParams memory depositParams) external;
 
-    function withdraw(IFarm farm, uint256 amount, address receiver) external;
+    function depositBatch(DepositParams[] memory depositParams) external;
 
-    function requestClaim(IFarm farm, uint256 amount, address receiver) external;
+    function withdraw(WithdrawParams memory withdrawParams) external;
 
-    function claim(
-        IFarm farm,
-        uint256 amount,
-        address owner,
-        uint256 claimableTime,
-        bytes32 claimId
-    )
-        external;
+    function withdrawBatch(WithdrawParams[] memory withdrawParams) external;
 
-    function claimAndStake(IFarm farm, uint256 amount, address receiver) external;
+    function requestClaim(RequestClaimParams memory requestClaimParams) external;
+
+    function requestClaimBatch(RequestClaimParams[] memory requestClaimParams) external;
+
+    function claim(ClaimParams memory claimParams) external;
+
+    function claimBatch(ClaimParams[] memory claimParams) external;
+
+    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) external;
+
+    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParams) external;
 
     function mintRewardCallback(address to, uint256 amount) external;
 

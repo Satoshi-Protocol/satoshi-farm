@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+import { IFarm } from "./IFarm.sol";
 import { IFarmManager } from "./IFarmManager.sol";
 import { IRewardToken } from "./IRewardToken.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -22,6 +23,8 @@ struct FarmConfig {
     uint256 claimEndTime;
     // delay time for claim
     uint256 claimDelayTime;
+    // is claim and stake enabled
+    bool claimAndStakeEnabled;
 }
 
 enum ClaimStatus {
@@ -39,9 +42,12 @@ interface IFarm {
     error AssetBalanceChangedUnexpectedly(uint256 expected, uint256 actual);
     error InvalidClaimTime(uint256 currentTime);
     error ClaimIsNotReady(uint256 claimableTime, uint256 currentTime);
-    error InvalidClaimStatus(ClaimStatus status);
+    error AlreadyClaimed();
     error InvalidClaimId(bytes32 claimId, bytes32 expectedClaimId);
     error ZeroPendingRewards();
+    error RequestClaimFirst();
+    error ClaimAndStakeDisabled();
+    error InvalidStatusToRequestClaim(ClaimStatus status);
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
@@ -112,5 +118,5 @@ interface IFarm {
     function farmConfig()
         external
         view
-        returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256);
+        returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool);
 }

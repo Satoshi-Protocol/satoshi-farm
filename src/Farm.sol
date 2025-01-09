@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import { ClaimStatus, FarmConfig, IFarm } from "./interfaces/IFarm.sol";
 
-import { IFarmManager } from "./interfaces/IFarmManager.sol";
+import { DepositParams, IFarmManager } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
 import { FarmMath } from "./libraries/FarmMath.sol";
 
@@ -50,14 +50,15 @@ contract Farm is IFarm, Initializable {
     {
         _checkIsNotZeroAddress(_underlyingAsset);
         _checkIsNotZeroAddress(_rewardToken);
-        _checkIsNotZeroAddress(_rewardFarm);
         _checkIsNotZeroAddress(_farmManager);
+        // rewardFarm can be zero address
 
         underlyingAsset = IERC20(_underlyingAsset);
         rewardToken = IRewardToken(_rewardToken);
         rewardFarm = IFarm(_rewardFarm);
         farmManager = IFarmManager(_farmManager);
         farmConfig = _farmConfig;
+
         emit FarmConfigUpdated(_farmConfig);
     }
 
@@ -170,8 +171,18 @@ contract Farm is IFarm, Initializable {
         }
     }
 
+    function _checkIsClaimAndStakeEnabled() internal view {
+        if (!_isClaimAndStakeEnabled()) {
+            revert ClaimAndStakeDisabled();
+        }
+    }
+
     function _isClaimable() internal view returns (bool) {
         return block.timestamp >= farmConfig.claimStartTime && block.timestamp <= farmConfig.claimEndTime;
+    }
+
+    function _isClaimAndStakeEnabled() internal view returns (bool) {
+        return farmConfig.claimAndStakeEnabled;
     }
 
     function _deposit(uint256 amount, address depositor, address receiver) internal {
@@ -237,11 +248,15 @@ contract Farm is IFarm, Initializable {
             revert ZeroPendingRewards();
         }
 
-        // update state
-        _updatePendingReward(owner, amount, false);
-
         uint256 claimableTime = block.timestamp + farmConfig.claimDelayTime;
         bytes32 claimId = keccak256(abi.encodePacked(amount, owner, receiver, claimableTime));
+        ClaimStatus claimStatus = _claimStatus[claimId];
+        if (claimStatus != ClaimStatus.NONE) {
+            revert InvalidStatusToRequestClaim(claimStatus);
+        }
+
+        // update state
+        _updatePendingReward(owner, amount, false);
         _claimStatus[claimId] = ClaimStatus.PENDING;
 
         emit ClaimRequested(claimId, amount, owner, receiver, claimableTime);
@@ -265,18 +280,24 @@ contract Farm is IFarm, Initializable {
         _updateReward(owner);
 
         ClaimStatus claimStatus = _claimStatus[claimId];
-        // if claimDelayTime > 0 or claim is requested
-        if (farmConfig.claimDelayTime > 0 || claimStatus == ClaimStatus.PENDING) {
-            if (claimStatus != ClaimStatus.PENDING) {
-                revert InvalidClaimStatus(claimStatus);
-            }
 
+        if (claimStatus == ClaimStatus.CLAIMED) {
+            revert AlreadyClaimed();
+        }
+
+        // if claim is requested
+        if (claimStatus == ClaimStatus.PENDING) {
             if (claimableTime > block.timestamp) {
                 revert ClaimIsNotReady(claimableTime, block.timestamp);
             }
         } else {
-            // if no delay time, request claim then claim immediately
-            _requestClaim(amount, owner, receiver);
+            if (farmConfig.claimDelayTime == 0) {
+                // if no delay time, request claim then claim immediately
+                _requestClaim(amount, owner, receiver);
+            } else {
+                // if has delay time, use `requestClaim` first then `claim` later
+                revert RequestClaimFirst();
+            }
         }
     }
 
@@ -290,6 +311,7 @@ contract Farm is IFarm, Initializable {
 
     function _beforeClaimAndStake(uint256, address owner, address) internal {
         _checkIsClaimable();
+        _checkIsClaimAndStakeEnabled();
 
         _updateReward(owner);
     }
@@ -308,12 +330,16 @@ contract Farm is IFarm, Initializable {
         // update state
         _updatePendingReward(owner, amount, false);
 
+        //TODO: add cross chain claim and stake (call manager to mint reward and do cross chain deposit)
+
         // mint reward to address(this)
         farmManager.mintRewardCallback(address(this), amount);
 
         // stake(deposit) the reward to rewardFarm
         rewardToken.approve(address(farmManager), amount);
-        farmManager.deposit(rewardFarm, amount, receiver);
+
+        DepositParams memory depositParams = DepositParams({ farm: rewardFarm, amount: amount, receiver: receiver });
+        farmManager.deposit(depositParams);
         emit ClaimAndStake(rewardFarm, amount, receiver);
 
         return amount;

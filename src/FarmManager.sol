@@ -4,7 +4,14 @@ pragma solidity >=0.8.0 <0.9.0;
 import { Farm } from "./Farm.sol";
 
 import { FarmConfig, IFarm } from "./interfaces/IFarm.sol";
-import { IFarmManager } from "./interfaces/IFarmManager.sol";
+import {
+    ClaimAndStakeParams,
+    ClaimParams,
+    DepositParams,
+    IFarmManager,
+    RequestClaimParams,
+    WithdrawParams
+} from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
 
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -49,6 +56,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external onlyOwner {
         farm.updateFarmConfig(farmConfig);
+        emit FarmConfigUpdated(farm, farmConfig);
     }
 
     function createFarm(
@@ -74,48 +82,84 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return address(farm);
     }
 
-    function deposit(IFarm farm, uint256 amount, address receiver) external whenNotPaused {
+    function deposit(DepositParams memory depositParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver) =
+            (depositParams.farm, depositParams.amount, depositParams.receiver);
+
         _checkFarmIsValid(farm);
 
         farm.deposit(amount, msg.sender, receiver);
         emit Deposit(farm, amount, msg.sender, receiver);
     }
 
-    function withdraw(IFarm farm, uint256 amount, address receiver) external whenNotPaused {
+    function depositBatch(DepositParams[] memory depositParams) public whenNotPaused {
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            deposit(depositParams[i]);
+        }
+    }
+
+    function withdraw(WithdrawParams memory withdrawParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver) =
+            (withdrawParams.farm, withdrawParams.amount, withdrawParams.receiver);
+
         _checkFarmIsValid(farm);
 
         farm.withdraw(amount, msg.sender, receiver);
         emit Withdraw(farm, amount, msg.sender, receiver);
     }
 
-    function requestClaim(IFarm farm, uint256 amount, address receiver) external whenNotPaused {
+    function withdrawBatch(WithdrawParams[] memory withdrawParams) public whenNotPaused {
+        for (uint256 i = 0; i < withdrawParams.length; i++) {
+            withdraw(withdrawParams[i]);
+        }
+    }
+
+    function requestClaim(RequestClaimParams memory requestClaimParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver) =
+            (requestClaimParams.farm, requestClaimParams.amount, requestClaimParams.receiver);
+
         _checkFarmIsValid(farm);
 
         (uint256 claimAmt, uint256 claimableTime, bytes32 claimId) = farm.requestClaim(amount, msg.sender, receiver);
         emit ClaimRequested(farm, claimAmt, msg.sender, receiver, claimableTime, claimId);
     }
 
-    function claim(
-        IFarm farm,
-        uint256 amount,
-        address owner,
-        uint256 claimableTime,
-        bytes32 claimId
-    )
-        external
-        whenNotPaused
-    {
+    function requestClaimBatch(RequestClaimParams[] memory requestClaimParams) public whenNotPaused {
+        for (uint256 i = 0; i < requestClaimParams.length; i++) {
+            requestClaim(requestClaimParams[i]);
+        }
+    }
+
+    function claim(ClaimParams memory claimParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address owner, uint256 claimableTime, bytes32 claimId) =
+            (claimParams.farm, claimParams.amount, claimParams.owner, claimParams.claimableTime, claimParams.claimId);
+
         _checkFarmIsValid(farm);
 
         farm.claim(amount, owner, msg.sender, claimableTime, claimId);
         emit RewardClaimed(farm, amount, owner, msg.sender, claimableTime, claimId);
     }
 
-    function claimAndStake(IFarm farm, uint256 amount, address receiver) external whenNotPaused {
+    function claimBatch(ClaimParams[] memory claimParams) public whenNotPaused {
+        for (uint256 i = 0; i < claimParams.length; i++) {
+            claim(claimParams[i]);
+        }
+    }
+
+    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver) =
+            (claimAndStakeParams.farm, claimAndStakeParams.amount, claimAndStakeParams.receiver);
+
         _checkFarmIsValid(farm);
 
         uint256 claimAndStakeAmt = farm.claimAndStake(amount, msg.sender, receiver);
         emit ClaimAndStake(farm, claimAndStakeAmt, msg.sender, receiver);
+    }
+
+    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParams) public whenNotPaused {
+        for (uint256 i = 0; i < claimAndStakeParams.length; i++) {
+            claimAndStake(claimAndStakeParams[i]);
+        }
     }
 
     function mintRewardCallback(address to, uint256 amount) external onlyFarm(msg.sender) {
