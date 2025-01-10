@@ -15,7 +15,7 @@ import { Script, console } from "forge-std/Script.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import {REWARD_TOKEN_ADDRESS, DeploySetupConfig} from "./DeploySetupConfig.sol";
+import { DeploySetupConfig, REWARD_TOKEN_ADDRESS } from "./DeploySetupConfig.sol";
 
 contract DeploySetupScript is Script, DeploySetupConfig {
     uint256 internal DEPLOYER_PRIVATE_KEY;

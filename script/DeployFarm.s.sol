@@ -8,7 +8,12 @@ import { Script, console } from "forge-std/Script.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {FARM_MANAGER_ADDRESS, UNDERLYING_ASSET_ADDRESS, REWARD_FARM_ADDRESS, DeployFarmConfig} from "./DeployFarmConfig.sol";
+import {
+    DeployFarmConfig,
+    FARM_MANAGER_ADDRESS,
+    REWARD_FARM_ADDRESS,
+    UNDERLYING_ASSET_ADDRESS
+} from "./DeployFarmConfig.sol";
 
 contract DeploySetupScript is Script, DeployFarmConfig {
     uint256 internal OWNER_PRIVATE_KEY;
