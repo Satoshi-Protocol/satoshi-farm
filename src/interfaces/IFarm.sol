@@ -59,7 +59,6 @@ interface IFarm {
     event RewardClaimed(
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
     );
-
     event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool add, uint256 timestamp);
     event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
     event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
