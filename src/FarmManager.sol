@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import { Farm } from "./Farm.sol";
 
-import { FarmConfig, IFarm } from "./interfaces/IFarm.sol";
+import { DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm } from "./interfaces/IFarm.sol";
 import {
     ClaimAndStakeParams,
     ClaimParams,
@@ -82,20 +82,27 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return address(farm);
     }
 
-    function deposit(DepositParams memory depositParams) public whenNotPaused {
+    function deposit(DepositParams memory depositParams) public payable whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (depositParams.farm, depositParams.amount, depositParams.receiver);
 
         _checkFarmIsValid(farm);
 
-        farm.deposit(amount, msg.sender, receiver);
-        emit Deposit(farm, amount, msg.sender, receiver);
-    }
-
-    function depositBatch(DepositParams[] memory depositParams) public whenNotPaused {
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            deposit(depositParams[i]);
+        if (address(farm.underlyingAsset()) == DEFAULT_NATIVE_ASSET_ADDRESS) {
+            // case1: deposit native asset
+            if (msg.value != amount) {
+                revert InvalidAmount(msg.value, amount);
+            }
+            farm.deposit{ value: amount }(amount, msg.sender, receiver);
+        } else {
+            // case2: deposit ERC20 token
+            if (msg.value != 0) {
+                revert InvalidAmount(msg.value, amount);
+            }
+            farm.deposit(amount, msg.sender, receiver);
         }
+
+        emit Deposit(farm, amount, msg.sender, receiver);
     }
 
     function withdraw(WithdrawParams memory withdrawParams) public whenNotPaused {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import { ClaimStatus, FarmConfig, IFarm } from "./interfaces/IFarm.sol";
+import { ClaimStatus, DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm } from "./interfaces/IFarm.sol";
 
 import { DepositParams, IFarmManager } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
@@ -67,7 +67,7 @@ contract Farm is IFarm, Initializable {
         emit FarmConfigUpdated(_farmConfig);
     }
 
-    function deposit(uint256 amount, address depositor, address receiver) external onlyFarmManager {
+    function deposit(uint256 amount, address depositor, address receiver) external payable onlyFarmManager {
         _beforeDeposit(amount, depositor, receiver);
 
         _deposit(amount, depositor, receiver);
@@ -185,20 +185,6 @@ contract Farm is IFarm, Initializable {
         return farmConfig.claimAndStakeEnabled;
     }
 
-    function _deposit(uint256 amount, address depositor, address receiver) internal {
-        uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
-        underlyingAsset.safeTransferFrom(depositor, address(this), amount);
-        uint256 balanceAfter = underlyingAsset.balanceOf(address(this));
-        uint256 balanceChange = balanceAfter - balanceBefore;
-        if (balanceChange != amount) {
-            revert AssetBalanceChangedUnexpectedly(amount, balanceChange);
-        }
-
-        _updateShares(amount, receiver, true);
-
-        emit Deposit(amount, depositor, receiver);
-    }
-
     function _beforeDeposit(uint256 amount, address, address receiver) internal view {
         if (_totalShares + amount > farmConfig.depositCap) {
             revert DepositCapExceeded(amount, farmConfig.depositCap);
@@ -209,12 +195,29 @@ contract Farm is IFarm, Initializable {
         }
     }
 
-    function _withdraw(uint256 amount, address owner, address receiver) internal {
-        underlyingAsset.safeTransfer(receiver, amount);
+    function _deposit(uint256 amount, address depositor, address receiver) internal {
+        if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
+            // case1: deposit native asset
+            if (msg.value != amount) {
+                revert InvalidAmount(msg.value, amount);
+            }
+        } else {
+            // case2: deposit ERC20 token
+            if (msg.value != 0) {
+                revert InvalidAmount(msg.value, amount);
+            }
+            uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
+            underlyingAsset.safeTransferFrom(depositor, address(this), amount);
+            uint256 balanceAfter = underlyingAsset.balanceOf(address(this));
+            uint256 balanceChange = balanceAfter - balanceBefore;
+            if (balanceChange != amount) {
+                revert AssetBalanceChangedUnexpectedly(amount, balanceChange);
+            }
+        }
 
-        _updateShares(amount, owner, false);
+        _updateShares(amount, receiver, true);
 
-        emit Withdraw(amount, owner, receiver);
+        emit Deposit(amount, depositor, receiver);
     }
 
     function _beforeWithdraw(uint256 amount, address owner, address) internal view {
@@ -222,6 +225,23 @@ contract Farm is IFarm, Initializable {
         if (amount > ownerShares) {
             revert AmountExceedsShares(amount, ownerShares);
         }
+    }
+
+    function _withdraw(uint256 amount, address owner, address receiver) internal {
+        if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
+            // case1: withdraw native asset
+            (bool success,) = receiver.call{ value: amount }("");
+            if (!success) {
+                revert TransferNativeAssetFailed();
+            }
+        } else {
+            // case2: withdraw ERC20 token
+            underlyingAsset.safeTransfer(receiver, amount);
+        }
+
+        _updateShares(amount, owner, false);
+
+        emit Withdraw(amount, owner, receiver);
     }
 
     function _beforeRequestClaim(uint256, address owner, address) internal {

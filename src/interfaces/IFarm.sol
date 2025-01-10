@@ -6,6 +6,8 @@ import { IFarmManager } from "./IFarmManager.sol";
 import { IRewardToken } from "./IRewardToken.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
+address constant DEFAULT_NATIVE_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
 struct FarmConfig {
     // deposit cap for the farm
     uint256 depositCap;
@@ -48,6 +50,8 @@ interface IFarm {
     error RequestClaimFirst();
     error ClaimAndStakeDisabled();
     error InvalidStatusToRequestClaim(ClaimStatus status);
+    error InvalidAmount(uint256 msgValue, uint256 amount);
+    error TransferNativeAssetFailed();
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
@@ -74,7 +78,7 @@ interface IFarm {
 
     function updateFarmConfig(FarmConfig memory farmConfig) external;
 
-    function deposit(uint256 amount, address depositor, address receiver) external;
+    function deposit(uint256 amount, address depositor, address receiver) external payable;
 
     function withdraw(uint256 amount, address receiver, address owner) external;
 

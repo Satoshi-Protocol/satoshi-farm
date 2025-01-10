@@ -44,6 +44,7 @@ interface IFarmManager {
     error InvalidAdmin(address expected, address actual);
     error FarmAlreadyExists(IFarm farm);
     error MintRewardTokenFailed(IRewardToken rewardToken, IFarm farm, uint256 amount);
+    error InvalidAmount(uint256 msgValue, uint256 amount);
 
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
     event FarmCreated(IFarm indexed farm, IERC20 indexed underlyingAsset, IFarm rewardFarm);
@@ -79,9 +80,7 @@ interface IFarmManager {
         external
         returns (address);
 
-    function deposit(DepositParams memory depositParams) external;
-
-    function depositBatch(DepositParams[] memory depositParams) external;
+    function deposit(DepositParams memory depositParams) external payable;
 
     function withdraw(WithdrawParams memory withdrawParams) external;
 
