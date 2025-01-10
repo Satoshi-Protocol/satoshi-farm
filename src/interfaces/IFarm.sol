@@ -52,6 +52,7 @@ interface IFarm {
     error InvalidStatusToRequestClaim(ClaimStatus status);
     error InvalidAmount(uint256 msgValue, uint256 amount);
     error TransferNativeAssetFailed();
+    error InvalidDepositNativeAsset();
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
@@ -78,7 +79,9 @@ interface IFarm {
 
     function updateFarmConfig(FarmConfig memory farmConfig) external;
 
-    function deposit(uint256 amount, address depositor, address receiver) external payable;
+    function depositNativeAsset(uint256 amount, address depositor, address receiver) external payable;
+
+    function depositERC20(uint256 amount, address depositor, address receiver) external;
 
     function withdraw(uint256 amount, address receiver, address owner) external;
 

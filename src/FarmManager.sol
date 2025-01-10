@@ -82,27 +82,43 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return address(farm);
     }
 
-    function deposit(DepositParams memory depositParams) public payable whenNotPaused {
+    function depositNativeAsset(DepositParams memory depositParams) public payable whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (depositParams.farm, depositParams.amount, depositParams.receiver);
 
         _checkFarmIsValid(farm);
 
-        if (address(farm.underlyingAsset()) == DEFAULT_NATIVE_ASSET_ADDRESS) {
-            // case1: deposit native asset
-            if (msg.value != amount) {
-                revert InvalidAmount(msg.value, amount);
-            }
-            farm.deposit{ value: amount }(amount, msg.sender, receiver);
-        } else {
-            // case2: deposit ERC20 token
-            if (msg.value != 0) {
-                revert InvalidAmount(msg.value, amount);
-            }
-            farm.deposit(amount, msg.sender, receiver);
+        if (msg.value < amount) {
+            revert InvalidAmount(msg.value, amount);
         }
+        farm.depositNativeAsset{ value: amount }(amount, msg.sender, receiver);
 
         emit Deposit(farm, amount, msg.sender, receiver);
+    }
+
+    function depositNativeAssetBatch(DepositParams[] memory depositParams) public payable whenNotPaused {
+        _checkTotalAmount(depositParams, msg.value);
+
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            depositNativeAsset(depositParams[i]);
+        }
+    }
+
+    function depositERC20(DepositParams memory depositParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver) =
+            (depositParams.farm, depositParams.amount, depositParams.receiver);
+
+        _checkFarmIsValid(farm);
+
+        farm.depositERC20(amount, msg.sender, receiver);
+
+        emit Deposit(farm, amount, msg.sender, receiver);
+    }
+
+    function depositERC20Batch(DepositParams[] memory depositParams) public whenNotPaused {
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            depositERC20(depositParams[i]);
+        }
     }
 
     function withdraw(WithdrawParams memory withdrawParams) public whenNotPaused {
@@ -219,6 +235,17 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     function _checkFarmIsValid(IFarm farm) internal view {
         if (!isValidFarm(farm)) {
             revert InvalidFarm(farm);
+        }
+    }
+
+    function _checkTotalAmount(DepositParams[] memory depositParams, uint256 msgValue) internal pure {
+        uint256 totalAmount;
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            totalAmount += depositParams[i].amount;
+        }
+
+        if (msgValue != totalAmount) {
+            revert InvalidAmount(msgValue, totalAmount);
         }
     }
 }

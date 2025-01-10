@@ -67,10 +67,16 @@ contract Farm is IFarm, Initializable {
         emit FarmConfigUpdated(_farmConfig);
     }
 
-    function deposit(uint256 amount, address depositor, address receiver) external payable onlyFarmManager {
+    function depositNativeAsset(uint256 amount, address depositor, address receiver) external payable {
         _beforeDeposit(amount, depositor, receiver);
 
-        _deposit(amount, depositor, receiver);
+        _depositNativeAsset(amount, depositor, receiver);
+    }
+
+    function depositERC20(uint256 amount, address depositor, address receiver) external {
+        _beforeDeposit(amount, depositor, receiver);
+
+        _depositERC20(amount, depositor, receiver);
     }
 
     function withdraw(uint256 amount, address owner, address receiver) external onlyFarmManager {
@@ -195,24 +201,27 @@ contract Farm is IFarm, Initializable {
         }
     }
 
-    function _deposit(uint256 amount, address depositor, address receiver) internal {
-        if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
-            // case1: deposit native asset
-            if (msg.value != amount) {
-                revert InvalidAmount(msg.value, amount);
-            }
-        } else {
-            // case2: deposit ERC20 token
-            if (msg.value != 0) {
-                revert InvalidAmount(msg.value, amount);
-            }
-            uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
-            underlyingAsset.safeTransferFrom(depositor, address(this), amount);
-            uint256 balanceAfter = underlyingAsset.balanceOf(address(this));
-            uint256 balanceChange = balanceAfter - balanceBefore;
-            if (balanceChange != amount) {
-                revert AssetBalanceChangedUnexpectedly(amount, balanceChange);
-            }
+    function _depositNativeAsset(uint256 amount, address depositor, address receiver) internal {
+        if (address(underlyingAsset) != DEFAULT_NATIVE_ASSET_ADDRESS) {
+            revert InvalidDepositNativeAsset();
+        }
+
+        if (msg.value != amount) {
+            revert InvalidAmount(msg.value, amount);
+        }
+
+        _updateShares(amount, receiver, true);
+
+        emit Deposit(amount, depositor, receiver);
+    }
+
+    function _depositERC20(uint256 amount, address depositor, address receiver) internal {
+        uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
+        underlyingAsset.safeTransferFrom(depositor, address(this), amount);
+        uint256 balanceAfter = underlyingAsset.balanceOf(address(this));
+        uint256 balanceChange = balanceAfter - balanceBefore;
+        if (balanceChange != amount) {
+            revert AssetBalanceChangedUnexpectedly(amount, balanceChange);
         }
 
         _updateShares(amount, receiver, true);
@@ -359,7 +368,7 @@ contract Farm is IFarm, Initializable {
         rewardToken.approve(address(farmManager), amount);
 
         DepositParams memory depositParams = DepositParams({ farm: rewardFarm, amount: amount, receiver: receiver });
-        farmManager.deposit(depositParams);
+        farmManager.depositERC20(depositParams);
         emit ClaimAndStake(rewardFarm, amount, receiver);
 
         return amount;

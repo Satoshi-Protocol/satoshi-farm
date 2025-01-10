@@ -80,7 +80,13 @@ interface IFarmManager {
         external
         returns (address);
 
-    function deposit(DepositParams memory depositParams) external payable;
+    function depositNativeAsset(DepositParams memory depositParams) external payable;
+
+    function depositNativeAssetBatch(DepositParams[] memory depositParams) external payable;
+
+    function depositERC20(DepositParams memory depositParams) external;
+
+    function depositERC20Batch(DepositParams[] memory depositParams) external;
 
     function withdraw(WithdrawParams memory withdrawParams) external;
 
