@@ -26,9 +26,9 @@ contract Farm is IFarm, Initializable {
     uint256 internal _lastRewardPerToken;
     uint256 internal _lastUpdateTime;
     mapping(address => uint256) internal _shares;
-    mapping(address => uint256) internal _pendingRewards;
     mapping(address => uint256) internal _lastUserRewardPerToken;
-    //
+    mapping(address => uint256) internal _pendingRewards;
+    // claimId(keccak256(amount, owner, receiver, claimableTime)) => ClaimStatus
     mapping(bytes32 => ClaimStatus) internal _claimStatus;
 
     modifier onlyFarmManager() {

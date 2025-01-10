@@ -7,11 +7,6 @@ library FarmMath {
     uint256 internal constant PENALTY_RATIO_PRECISION = 1e6;
     uint256 internal constant REWARD_PER_TOKEN_PRECISION = 1e18;
 
-    function computePenaltyAmount(uint256 penaltyRatio, uint256 amount) internal pure returns (uint256) {
-        uint256 penaltyAmount = (amount * penaltyRatio) / PENALTY_RATIO_PRECISION;
-        return penaltyAmount;
-    }
-
     function computeReward(
         FarmConfig memory farmConfig,
         uint256 share,
@@ -22,15 +17,13 @@ library FarmMath {
         view
         returns (uint256)
     {
-        uint256 currentTime = block.timestamp;
         if (farmConfig.rewardStartTime == 0 || farmConfig.rewardEndTime == 0 || farmConfig.rewardRate == 0) {
             return 0;
         }
-        if (currentTime < farmConfig.rewardStartTime) {
+        if (block.timestamp < farmConfig.rewardStartTime || block.timestamp > farmConfig.rewardEndTime) {
             return 0;
         }
-        uint256 rewardAmount = computeReward(share, lastRewardPerToken, lastUserRewardPerToken);
-        return rewardAmount;
+        return (share * (lastRewardPerToken - lastUserRewardPerToken)) / REWARD_PER_TOKEN_PRECISION;
     }
 
     function computeLatestRewardPerToken(
@@ -58,21 +51,7 @@ library FarmMath {
         if (totalShares == 0) {
             return 0;
         }
-        uint256 rewardPerToken = (rewardRate * interval * REWARD_PER_TOKEN_PRECISION) / totalShares;
-        return rewardPerToken;
-    }
-
-    function computeReward(
-        uint256 share,
-        uint256 lastRewardPerToken,
-        uint256 lastUserRewardPerToken
-    )
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 rewardAmount = (share * (lastRewardPerToken - lastUserRewardPerToken)) / REWARD_PER_TOKEN_PRECISION;
-        return rewardAmount;
+        return (rewardRate * interval * REWARD_PER_TOKEN_PRECISION) / totalShares;
     }
 
     function computeInterval(
