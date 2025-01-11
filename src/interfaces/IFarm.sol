@@ -50,21 +50,26 @@ interface IFarm {
     error RequestClaimFirst();
     error ClaimAndStakeDisabled();
     error InvalidStatusToRequestClaim(ClaimStatus status);
+    error InvalidStatusToStakePendingClaim(ClaimStatus status);
     error InvalidAmount(uint256 msgValue, uint256 amount);
     error TransferNativeAssetFailed();
     error InvalidDepositNativeAsset();
+    error InvalidDepositERC20();
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
     event Withdraw(uint256 indexed amount, address owner, address receiver);
-    event ClaimAndStake(IFarm indexed rewardFarm, uint256 indexed amount, address receiver);
     event ClaimRequested(
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimableTime
     );
     event RewardClaimed(
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
     );
-    event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool add, uint256 timestamp);
+    event StakePendingClaim(
+        bytes32 indexed claimId, IFarm rewardFarm, uint256 indexed amount, address owner, address receiver
+    );
+    event ClaimAndStake(IFarm rewardFarm, uint256 indexed amount, address owner, address receiver);
+    event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add, uint256 timestamp);
     event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
     event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
 

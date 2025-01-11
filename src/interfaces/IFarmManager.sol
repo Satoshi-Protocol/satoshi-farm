@@ -45,6 +45,7 @@ interface IFarmManager {
     error FarmAlreadyExists(IFarm farm);
     error MintRewardTokenFailed(IRewardToken rewardToken, IFarm farm, uint256 amount);
     error InvalidAmount(uint256 msgValue, uint256 amount);
+    error AssetBalanceChangedUnexpectedly(IERC20 token, IFarm farm, address from, uint256 amount, uint256 balanceDiff);
 
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
     event FarmCreated(IFarm indexed farm, IERC20 indexed underlyingAsset, IFarm rewardFarm);
@@ -105,6 +106,8 @@ interface IFarmManager {
     function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParams) external;
 
     function mintRewardCallback(address to, uint256 amount) external;
+
+    function transferCallback(IERC20 token, address from, uint256 amount) external;
 
     function totalShares(IFarm farm) external view returns (uint256);
 

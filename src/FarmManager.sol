@@ -20,8 +20,11 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable {
+    using SafeERC20 for IERC20;
+
     IRewardToken public rewardToken;
     IBeacon public farmBeacon;
     mapping(IFarm => bool) public validFarms;
@@ -191,6 +194,18 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         try rewardToken.mint(to, amount) { }
         catch {
             revert MintRewardTokenFailed(rewardToken, farm, amount);
+        }
+    }
+
+    function transferCallback(IERC20 token, address from, uint256 amount) external onlyFarm(msg.sender) {
+        IFarm farm = IFarm(msg.sender);
+
+        uint256 balanceBefore = token.balanceOf(address(farm));
+        token.safeTransferFrom(from, address(farm), amount);
+        uint256 balanceAfter = token.balanceOf(address(farm));
+        uint256 balanceDiff = balanceAfter - balanceBefore;
+        if (balanceDiff != amount) {
+            revert AssetBalanceChangedUnexpectedly(token, farm, from, amount, balanceDiff);
         }
     }
 
