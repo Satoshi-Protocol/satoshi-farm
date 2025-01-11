@@ -33,6 +33,14 @@ struct ClaimParams {
     bytes32 claimId;
 }
 
+struct StakePendingClaimParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+    uint256 claimableTime;
+    bytes32 claimId;
+}
+
 struct ClaimAndStakeParams {
     IFarm farm;
     uint256 amount;
@@ -65,6 +73,14 @@ interface IFarmManager {
         address owner,
         address receiver,
         uint256 claimedTime,
+        bytes32 indexed claimId
+    );
+    event PendingClaimStaked(
+        IFarm indexed farm,
+        uint256 indexed amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
         bytes32 indexed claimId
     );
     event ClaimAndStake(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
@@ -100,6 +116,10 @@ interface IFarmManager {
     function claim(ClaimParams memory claimParams) external;
 
     function claimBatch(ClaimParams[] memory claimParams) external;
+
+    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) external;
+
+    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParams) external;
 
     function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) external;
 

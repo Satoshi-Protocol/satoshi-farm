@@ -66,7 +66,12 @@ interface IFarm {
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
     );
     event StakePendingClaim(
-        bytes32 indexed claimId, IFarm rewardFarm, uint256 indexed amount, address owner, address receiver
+        bytes32 indexed claimId,
+        IFarm rewardFarm,
+        uint256 indexed amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime
     );
     event ClaimAndStake(IFarm rewardFarm, uint256 indexed amount, address owner, address receiver);
     event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add, uint256 timestamp);
@@ -99,6 +104,15 @@ interface IFarm {
         returns (uint256, uint256, bytes32);
 
     function claim(uint256 amount, address owner, address receiver, uint256 claimableTime, bytes32 claimId) external;
+
+    function stakePendingClaim(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        bytes32 claimId
+    )
+        external;
 
     function claimAndStake(uint256 amount, address owner, address receiver) external returns (uint256);
 

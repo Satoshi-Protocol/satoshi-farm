@@ -128,7 +128,7 @@ contract Farm is IFarm, Initializable {
     {
         _beforeStakePendingClaim(amount, owner, receiver, claimableTime, claimId);
 
-        _stakePendingClaim(amount, owner, receiver, claimId);
+        _stakePendingClaim(amount, owner, receiver, claimableTime, claimId);
     }
 
     function claimAndStake(
@@ -371,7 +371,15 @@ contract Farm is IFarm, Initializable {
         }
     }
 
-    function _stakePendingClaim(uint256 amount, address owner, address receiver, bytes32 claimId) internal {
+    function _stakePendingClaim(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        bytes32 claimId
+    )
+        internal
+    {
         _claimStatus[claimId] = ClaimStatus.CLAIMED;
 
         // mint reward to address(this)
@@ -382,7 +390,7 @@ contract Farm is IFarm, Initializable {
 
         DepositParams memory depositParams = DepositParams({ farm: rewardFarm, amount: amount, receiver: receiver });
         farmManager.depositERC20(depositParams);
-        emit StakePendingClaim(claimId, rewardFarm, amount, owner, receiver);
+        emit StakePendingClaim(claimId, rewardFarm, amount, owner, receiver, claimableTime);
     }
 
     function _beforeClaimAndStake(uint256, address owner, address) internal {

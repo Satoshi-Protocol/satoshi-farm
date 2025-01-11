@@ -10,6 +10,7 @@ import {
     DepositParams,
     IFarmManager,
     RequestClaimParams,
+    StakePendingClaimParams,
     WithdrawParams
 } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
@@ -169,6 +170,26 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     function claimBatch(ClaimParams[] memory claimParams) public whenNotPaused {
         for (uint256 i = 0; i < claimParams.length; i++) {
             claim(claimParams[i]);
+        }
+    }
+
+    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver, uint256 claimableTime, bytes32 claimId) = (
+            stakePendingClaimParams.farm,
+            stakePendingClaimParams.amount,
+            stakePendingClaimParams.receiver,
+            stakePendingClaimParams.claimableTime,
+            stakePendingClaimParams.claimId
+        );
+        _checkFarmIsValid(farm);
+
+        farm.stakePendingClaim(amount, msg.sender, receiver, claimableTime, claimId);
+        emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
+    }
+
+    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParams) public whenNotPaused {
+        for (uint256 i = 0; i < stakePendingClaimParams.length; i++) {
+            stakePendingClaim(stakePendingClaimParams[i]);
         }
     }
 
