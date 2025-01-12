@@ -180,11 +180,21 @@ contract Farm is IFarm, Initializable {
         return _pendingRewards[addr];
     }
 
+    function isDepositEnabled() external view returns (bool) {
+        return _isDepositEnabled();
+    }
+
     function isClaimable() external view returns (bool) {
         return _isClaimable();
     }
 
     // --- internal functions ---
+
+    function _checkIsDepositEnabled() internal view {
+        if (!_isDepositEnabled()) {
+            revert InvalidDepositTime(block.timestamp, farmConfig.depositStartTime, farmConfig.depositEndTime);
+        }
+    }
 
     function _checkIsClaimable() internal view {
         if (!_isClaimable()) {
@@ -198,6 +208,10 @@ contract Farm is IFarm, Initializable {
         }
     }
 
+    function _isDepositEnabled() internal view returns (bool) {
+        return block.timestamp >= farmConfig.depositStartTime && block.timestamp <= farmConfig.depositEndTime;
+    }
+
     function _isClaimable() internal view returns (bool) {
         return block.timestamp >= farmConfig.claimStartTime && block.timestamp <= farmConfig.claimEndTime;
     }
@@ -206,7 +220,11 @@ contract Farm is IFarm, Initializable {
         return farmConfig.claimAndStakeEnabled;
     }
 
-    function _beforeDeposit(uint256 amount, address, address receiver) internal view {
+    function _beforeDeposit(uint256 amount, address, address receiver) internal {
+        if (amount == 0) {
+            revert InvalidZeroAmount();
+        }
+
         if (_totalShares + amount > farmConfig.depositCap) {
             revert DepositCapExceeded(amount, farmConfig.depositCap);
         }
@@ -214,6 +232,10 @@ contract Farm is IFarm, Initializable {
         if (_shares[receiver] + amount > farmConfig.depositCapPerUser) {
             revert DepositCapPerUserExceeded(amount, farmConfig.depositCapPerUser);
         }
+
+        _checkIsDepositEnabled();  
+
+        _updateReward(receiver);
     }
 
     function _depositNativeAsset(uint256 amount, address depositor, address receiver) internal {
@@ -242,11 +264,13 @@ contract Farm is IFarm, Initializable {
         emit Deposit(amount, depositor, receiver);
     }
 
-    function _beforeWithdraw(uint256 amount, address owner, address) internal view {
+    function _beforeWithdraw(uint256 amount, address owner, address) internal {
         uint256 ownerShares = _shares[owner];
         if (amount > ownerShares) {
             revert AmountExceedsShares(amount, ownerShares);
         }
+
+        _updateReward(owner);
     }
 
     function _withdraw(uint256 amount, address owner, address receiver) internal {

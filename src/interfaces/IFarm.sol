@@ -13,6 +13,10 @@ struct FarmConfig {
     uint256 depositCap;
     // deposit cap per user
     uint256 depositCapPerUser;
+    // deposit start time
+    uint256 depositStartTime;
+    // deposit end time
+    uint256 depositEndTime;
     // reward rate per second
     uint256 rewardRate;
     // reward start time
@@ -37,6 +41,7 @@ enum ClaimStatus {
 
 interface IFarm {
     error InvalidZeroAddress();
+    error InvalidZeroAmount();
     error DepositCapExceeded(uint256 amount, uint256 depositCap);
     error DepositCapPerUserExceeded(uint256 amount, uint256 depositCapPerUser);
     error AmountExceedsShares(uint256 amount, uint256 shares);
@@ -55,6 +60,7 @@ interface IFarm {
     error TransferNativeAssetFailed();
     error InvalidDepositNativeAsset();
     error InvalidDepositERC20();
+    error InvalidDepositTime(uint256 currentTime, uint256 depositStartTime, uint256 depositEndTime);
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
@@ -134,6 +140,8 @@ interface IFarm {
 
     function isClaimable() external view returns (bool);
 
+    function isDepositEnabled() external view returns (bool);
+
     function rewardToken() external view returns (IRewardToken);
 
     function underlyingAsset() external view returns (IERC20);
@@ -143,5 +151,5 @@ interface IFarm {
     function farmConfig()
         external
         view
-        returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool);
+        returns (uint256, uint256, uint256, uint256,uint256, uint256, uint256, uint256, uint256, uint256, bool);
 }

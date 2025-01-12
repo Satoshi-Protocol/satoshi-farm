@@ -9,6 +9,8 @@ abstract contract DeploySetupConfig {
     FarmConfig internal REWARD_FARM_CONFIG = FarmConfig({
         depositCap: 0,
         depositCapPerUser: 0,
+        depositStartTime: 0,
+        depositEndTime: type(uint256).max,
         rewardRate: 1000,
         rewardStartTime: 0,
         rewardEndTime: type(uint256).max,
