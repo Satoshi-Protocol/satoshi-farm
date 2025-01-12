@@ -151,5 +151,5 @@ interface IFarm {
     function farmConfig()
         external
         view
-        returns (uint256, uint256, uint256, uint256,uint256, uint256, uint256, uint256, uint256, uint256, bool);
+        returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool);
 }

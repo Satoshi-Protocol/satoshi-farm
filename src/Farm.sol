@@ -233,7 +233,7 @@ contract Farm is IFarm, Initializable {
             revert DepositCapPerUserExceeded(amount, farmConfig.depositCapPerUser);
         }
 
-        _checkIsDepositEnabled();  
+        _checkIsDepositEnabled();
 
         _updateReward(receiver);
     }
