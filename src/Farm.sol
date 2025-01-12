@@ -70,6 +70,7 @@ contract Farm is IFarm, Initializable {
         _checkIsNotZeroAddress(_rewardToken);
         _checkIsNotZeroAddress(_farmManager);
         // rewardFarm can be zero address
+        _checkFarmConfig(_farmConfig);
 
         underlyingAsset = IERC20(_underlyingAsset);
         rewardToken = IRewardToken(_rewardToken);
@@ -81,6 +82,8 @@ contract Farm is IFarm, Initializable {
     }
 
     function updateFarmConfig(FarmConfig memory _farmConfig) external onlyFarmManager {
+        _checkFarmConfig(_farmConfig);
+        _updateLastRewardPerToken(_calcRewardPerToken());
         farmConfig = _farmConfig;
         emit FarmConfigUpdated(_farmConfig);
     }
@@ -219,7 +222,7 @@ contract Farm is IFarm, Initializable {
     }
 
     function previewReward(address addr) external view returns (uint256) {
-        (, uint256 rewardAmount) = _calcReward(addr);
+        uint256 rewardAmount = _calcUserReward(addr, _calcRewardPerToken());
         return rewardAmount + _pendingRewards[addr];
     }
 
@@ -392,7 +395,6 @@ contract Farm is IFarm, Initializable {
 
         _checkClaimId(amount, owner, receiver, claimableTime, claimId);
 
-        // TODO: check if need to update reward
         _updateReward(owner);
 
         ClaimStatus claimStatus = _claimStatus[claimId];
@@ -505,20 +507,15 @@ contract Farm is IFarm, Initializable {
     }
 
     function _updateReward(address addr) internal {
-        // calculate reward per token and reward amount
-        (uint256 rewardPerToken, uint256 rewardAmount) = _calcReward(addr);
-
-        // update last reward state
+        uint256 rewardPerToken = _calcRewardPerToken();
         _updateLastRewardPerToken(rewardPerToken);
-
-        // update user reward state
-        _updateLastUserRewardPerToken(addr, rewardPerToken);
-        _updatePendingReward(addr, rewardAmount, true);
+        uint256 rewardAmount = _calcUserReward(addr, rewardPerToken);
+        _updateUserReward(addr, rewardPerToken, rewardAmount);
     }
 
-    function _calcReward(address addr) internal view returns (uint256, uint256) {
+    function _calcRewardPerToken() internal view returns (uint256) {
         // calculate reward per token
-        uint256 rewardPerToken = FarmMath.computeLatestRewardPerToken(
+        return FarmMath.computeLatestRewardPerToken(
             _lastRewardPerToken,
             farmConfig.rewardRate,
             FarmMath.computeInterval(
@@ -526,11 +523,17 @@ contract Farm is IFarm, Initializable {
             ),
             _totalShares
         );
+    }
 
+    function _calcUserReward(address addr, uint256 rewardPerToken) internal view returns (uint256) {
         // calculate reward amount
-        uint256 rewardAmount =
-            FarmMath.computeReward(farmConfig, _shares[addr], rewardPerToken, _lastUserRewardPerToken[addr]);
-        return (rewardPerToken, rewardAmount);
+        return FarmMath.computeReward(farmConfig, _shares[addr], rewardPerToken, _lastUserRewardPerToken[addr]);
+    }
+
+    function _updateUserReward(address addr, uint256 rewardPerToken, uint256 rewardAmount) internal {
+        // update user reward state
+        _updateLastUserRewardPerToken(addr, rewardPerToken);
+        _updatePendingReward(addr, rewardAmount, true);
     }
 
     function _updateLastRewardPerToken(uint256 rewardPerToken) internal {
@@ -582,5 +585,20 @@ contract Farm is IFarm, Initializable {
 
     function _checkIsNotZeroAddress(address addr) internal pure {
         if (addr == address(0)) revert InvalidZeroAddress();
+    }
+
+    function _checkFarmConfig(FarmConfig memory _farmConfig) internal pure {
+        if (_farmConfig.rewardEndTime < _farmConfig.rewardStartTime) {
+            revert InvalidConfigRewardTime(_farmConfig.rewardStartTime, _farmConfig.rewardEndTime);
+        }
+        if (_farmConfig.depositEndTime < _farmConfig.depositStartTime) {
+            revert InvalidConfigDepositTime(_farmConfig.depositStartTime, _farmConfig.depositEndTime);
+        }
+        if (_farmConfig.claimEndTime < _farmConfig.claimStartTime) {
+            revert InvalidConfigClaimTime(_farmConfig.claimStartTime, _farmConfig.claimEndTime);
+        }
+        if (_farmConfig.depositCap < _farmConfig.depositCapPerUser) {
+            revert InvalidConfigDepositCap(_farmConfig.depositCap, _farmConfig.depositCapPerUser);
+        }
     }
 }

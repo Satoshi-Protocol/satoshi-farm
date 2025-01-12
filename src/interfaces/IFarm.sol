@@ -71,6 +71,10 @@ interface IFarm {
     error InvalidMerkleProof(bytes32[] merkleProof, bytes32 merkleRoot, bytes32 leaf);
     error WhitelistNotEnabled();
     error WhitelistEnabled();
+    error InvalidConfigRewardTime(uint256 startTime, uint256 endTime);
+    error InvalidConfigDepositTime(uint256 depositStartTime, uint256 depositEndTime);
+    error InvalidConfigClaimTime(uint256 claimStartTime, uint256 claimEndTime);
+    error InvalidConfigDepositCap(uint256 depositCap, uint256 depositCapPerUser);
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
