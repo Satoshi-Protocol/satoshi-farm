@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import { FarmConfig, IFarm } from "./IFarm.sol";
+import { FarmConfig, IFarm, WhitelistConfig } from "./IFarm.sol";
 import { IRewardToken } from "./IRewardToken.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+
+struct DepositWhitelistParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+    bytes32[] merkleProof;
+}
 
 struct DepositParams {
     IFarm farm;
@@ -56,7 +63,11 @@ interface IFarmManager {
     error AssetBalanceChangedUnexpectedly(IERC20 token, IFarm farm, address from, uint256 amount, uint256 balanceDiff);
 
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
+    event WhitelistConfigUpdated(IFarm farm, WhitelistConfig whitelistConfig);
     event FarmCreated(IFarm indexed farm, IERC20 indexed underlyingAsset, IFarm rewardFarm);
+    event DepositWhitelist(
+        IFarm indexed farm, uint256 indexed amount, address sender, address receiver, bytes32[] merkleProof
+    );
     event Deposit(IFarm indexed farm, uint256 indexed amount, address sender, address receiver);
     event Withdraw(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
     event ClaimRequested(
@@ -96,6 +107,14 @@ interface IFarmManager {
     )
         external
         returns (address);
+
+    function depositNativeAssetWhitelist(DepositWhitelistParams memory depositParams) external payable;
+
+    function depositNativeAssetWhitelistBatch(DepositWhitelistParams[] memory depositParams) external payable;
+
+    function depositERC20Whitelist(DepositWhitelistParams memory depositParams) external;
+
+    function depositERC20WhitelistBatch(DepositWhitelistParams[] memory depositParams) external;
 
     function depositNativeAsset(DepositParams memory depositParams) external payable;
 
@@ -142,6 +161,8 @@ interface IFarmManager {
     function getLastUserRewardPerToken(IFarm farm, address addr) external view returns (uint256);
 
     function getPendingReward(IFarm farm, address addr) external view returns (uint256);
+
+    function isDepositEnabled(IFarm farm) external view returns (bool);
 
     function isClaimable(IFarm farm) external view returns (bool);
 

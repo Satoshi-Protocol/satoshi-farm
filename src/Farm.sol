@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import { ClaimStatus, DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm } from "./interfaces/IFarm.sol";
+import { ClaimStatus, DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm, WhitelistConfig } from "./interfaces/IFarm.sol";
 
 import { DepositParams, IFarmManager } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
@@ -10,6 +10,7 @@ import { FarmMath } from "./libraries/FarmMath.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract Farm is IFarm, Initializable {
     using SafeERC20 for IERC20;
@@ -21,6 +22,7 @@ contract Farm is IFarm, Initializable {
     IFarmManager public farmManager;
     IRewardToken public rewardToken;
     FarmConfig public farmConfig;
+    WhitelistConfig public whitelistConfig;
 
     uint256 internal _totalShares;
     uint256 internal _lastRewardPerToken;
@@ -32,9 +34,25 @@ contract Farm is IFarm, Initializable {
     mapping(bytes32 => ClaimStatus) internal _claimStatus;
 
     modifier onlyFarmManager() {
-        if (msg.sender != address(farmManager)) {
-            revert InvalidFarmManager(msg.sender);
+        if (msg.sender != address(farmManager)) revert InvalidFarmManager(msg.sender);
+
+        _;
+    }
+
+    modifier onlyWhitelist(address depositor, bytes32[] calldata merkleProof) {
+        if (whitelistConfig.enabled == false) revert WhitelistNotEnabled();
+
+        bytes32 leaf = keccak256(abi.encode(depositor));
+        if (!MerkleProof.verify(merkleProof, whitelistConfig.merkleRoot, leaf)) {
+            revert InvalidMerkleProof(merkleProof, whitelistConfig.merkleRoot, leaf);
         }
+
+        _;
+    }
+
+    modifier onlyWhitelistNotEnabled() {
+        if (whitelistConfig.enabled) revert WhitelistEnabled();
+
         _;
     }
 
@@ -67,13 +85,66 @@ contract Farm is IFarm, Initializable {
         emit FarmConfigUpdated(_farmConfig);
     }
 
-    function depositNativeAsset(uint256 amount, address depositor, address receiver) external payable onlyFarmManager {
+    function updateWhitelistConfig(WhitelistConfig memory _whitelistConfig) external onlyFarmManager {
+        whitelistConfig = _whitelistConfig;
+        emit WhitelistConfigUpdated(_whitelistConfig);
+    }
+
+    function depositNativeAssetWhitelist(
+        uint256 amount,
+        address depositor,
+        address receiver,
+        bytes32[] calldata merkleProof
+    )
+        external
+        payable
+        onlyFarmManager
+        onlyWhitelist(depositor, merkleProof)
+    {
         _beforeDeposit(amount, depositor, receiver);
 
         _depositNativeAsset(amount, depositor, receiver);
     }
 
-    function depositERC20(uint256 amount, address depositor, address receiver) external onlyFarmManager {
+    function depositERC20Whitelist(
+        uint256 amount,
+        address depositor,
+        address receiver,
+        bytes32[] calldata merkleProof
+    )
+        external
+        onlyFarmManager
+        onlyWhitelist(depositor, merkleProof)
+    {
+        _beforeDeposit(amount, depositor, receiver);
+
+        _depositERC20(amount, depositor, receiver);
+    }
+
+    function depositNativeAsset(
+        uint256 amount,
+        address depositor,
+        address receiver
+    )
+        external
+        payable
+        onlyFarmManager
+        onlyWhitelistNotEnabled
+    {
+        _beforeDeposit(amount, depositor, receiver);
+
+        _depositNativeAsset(amount, depositor, receiver);
+    }
+
+    function depositERC20(
+        uint256 amount,
+        address depositor,
+        address receiver
+    )
+        external
+        onlyFarmManager
+        onlyWhitelistNotEnabled
+    {
         _beforeDeposit(amount, depositor, receiver);
 
         _depositERC20(amount, depositor, receiver);
@@ -197,15 +268,11 @@ contract Farm is IFarm, Initializable {
     }
 
     function _checkIsClaimable() internal view {
-        if (!_isClaimable()) {
-            revert InvalidClaimTime(block.timestamp);
-        }
+        if (!_isClaimable()) revert InvalidClaimTime(block.timestamp);
     }
 
     function _checkIsClaimAndStakeEnabled() internal view {
-        if (!_isClaimAndStakeEnabled()) {
-            revert ClaimAndStakeDisabled();
-        }
+        if (!_isClaimAndStakeEnabled()) revert ClaimAndStakeDisabled();
     }
 
     function _isDepositEnabled() internal view returns (bool) {
@@ -221,13 +288,9 @@ contract Farm is IFarm, Initializable {
     }
 
     function _beforeDeposit(uint256 amount, address, address receiver) internal {
-        if (amount == 0) {
-            revert InvalidZeroAmount();
-        }
+        if (amount == 0) revert InvalidZeroAmount();
 
-        if (_totalShares + amount > farmConfig.depositCap) {
-            revert DepositCapExceeded(amount, farmConfig.depositCap);
-        }
+        if (_totalShares + amount > farmConfig.depositCap) revert DepositCapExceeded(amount, farmConfig.depositCap);
 
         if (_shares[receiver] + amount > farmConfig.depositCapPerUser) {
             revert DepositCapPerUserExceeded(amount, farmConfig.depositCapPerUser);
@@ -239,13 +302,9 @@ contract Farm is IFarm, Initializable {
     }
 
     function _depositNativeAsset(uint256 amount, address depositor, address receiver) internal {
-        if (address(underlyingAsset) != DEFAULT_NATIVE_ASSET_ADDRESS) {
-            revert InvalidDepositNativeAsset();
-        }
+        if (address(underlyingAsset) != DEFAULT_NATIVE_ASSET_ADDRESS) revert InvalidDepositNativeAsset();
 
-        if (msg.value != amount) {
-            revert InvalidAmount(msg.value, amount);
-        }
+        if (msg.value != amount) revert InvalidAmount(msg.value, amount);
 
         _updateShares(amount, receiver, true);
 
@@ -253,9 +312,7 @@ contract Farm is IFarm, Initializable {
     }
 
     function _depositERC20(uint256 amount, address depositor, address receiver) internal {
-        if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
-            revert InvalidDepositERC20();
-        }
+        if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) revert InvalidDepositERC20();
 
         farmManager.transferCallback(underlyingAsset, depositor, amount);
 
@@ -266,26 +323,22 @@ contract Farm is IFarm, Initializable {
 
     function _beforeWithdraw(uint256 amount, address owner, address) internal {
         uint256 ownerShares = _shares[owner];
-        if (amount > ownerShares) {
-            revert AmountExceedsShares(amount, ownerShares);
-        }
+        if (amount > ownerShares) revert AmountExceedsShares(amount, ownerShares);
 
         _updateReward(owner);
     }
 
     function _withdraw(uint256 amount, address owner, address receiver) internal {
+        _updateShares(amount, owner, false);
+
         if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
             // case1: withdraw native asset
             (bool success,) = receiver.call{ value: amount }("");
-            if (!success) {
-                revert TransferNativeAssetFailed();
-            }
+            if (!success) revert TransferNativeAssetFailed();
         } else {
             // case2: withdraw ERC20 token
             underlyingAsset.safeTransfer(receiver, amount);
         }
-
-        _updateShares(amount, owner, false);
 
         emit Withdraw(amount, owner, receiver);
     }
@@ -310,16 +363,12 @@ contract Farm is IFarm, Initializable {
             amount = pendingRewards;
         }
 
-        if (pendingRewards == 0) {
-            revert ZeroPendingRewards();
-        }
+        if (pendingRewards == 0) revert ZeroPendingRewards();
 
         uint256 claimableTime = block.timestamp + farmConfig.claimDelayTime;
         bytes32 claimId = keccak256(abi.encode(amount, owner, receiver, claimableTime));
         ClaimStatus claimStatus = _claimStatus[claimId];
-        if (claimStatus != ClaimStatus.NONE) {
-            revert InvalidStatusToRequestClaim(claimStatus);
-        }
+        if (claimStatus != ClaimStatus.NONE) revert InvalidStatusToRequestClaim(claimStatus);
 
         // update state
         _updatePendingReward(owner, amount, false);
@@ -348,15 +397,11 @@ contract Farm is IFarm, Initializable {
 
         ClaimStatus claimStatus = _claimStatus[claimId];
 
-        if (claimStatus == ClaimStatus.CLAIMED) {
-            revert AlreadyClaimed();
-        }
+        if (claimStatus == ClaimStatus.CLAIMED) revert AlreadyClaimed();
 
         // if claim is requested
         if (claimStatus == ClaimStatus.PENDING) {
-            if (claimableTime > block.timestamp) {
-                revert ClaimIsNotReady(claimableTime, block.timestamp);
-            }
+            if (claimableTime > block.timestamp) revert ClaimIsNotReady(claimableTime, block.timestamp);
         } else {
             if (farmConfig.claimDelayTime == 0) {
                 // if no delay time, request claim then claim immediately
@@ -390,9 +435,7 @@ contract Farm is IFarm, Initializable {
 
         ClaimStatus claimStatus = _claimStatus[claimId];
 
-        if (claimStatus != ClaimStatus.PENDING) {
-            revert InvalidStatusToStakePendingClaim(claimStatus);
-        }
+        if (claimStatus != ClaimStatus.PENDING) revert InvalidStatusToStakePendingClaim(claimStatus);
     }
 
     function _stakePendingClaim(
@@ -426,9 +469,7 @@ contract Farm is IFarm, Initializable {
 
     function _claimAndStake(uint256 amount, address owner, address receiver) internal returns (uint256) {
         uint256 pendingRewards = _pendingRewards[owner];
-        if (pendingRewards == 0) {
-            revert ZeroPendingRewards();
-        }
+        if (pendingRewards == 0) revert ZeroPendingRewards();
 
         if (amount > pendingRewards) {
             // if amount exceeds pending rewards, claim all pending rewards
@@ -523,9 +564,7 @@ contract Farm is IFarm, Initializable {
         pure
     {
         bytes32 expectedClaimId = keccak256(abi.encode(amount, owner, receiver, claimableTime));
-        if (claimId != expectedClaimId) {
-            revert InvalidClaimId(claimId, expectedClaimId);
-        }
+        if (claimId != expectedClaimId) revert InvalidClaimId(claimId, expectedClaimId);
     }
 
     function _calcClaimId(
@@ -542,8 +581,6 @@ contract Farm is IFarm, Initializable {
     }
 
     function _checkIsNotZeroAddress(address addr) internal pure {
-        if (addr == address(0)) {
-            revert InvalidZeroAddress();
-        }
+        if (addr == address(0)) revert InvalidZeroAddress();
     }
 }

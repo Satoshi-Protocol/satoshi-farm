@@ -33,6 +33,13 @@ struct FarmConfig {
     bool claimAndStakeEnabled;
 }
 
+struct WhitelistConfig {
+    // is whitelist enabled
+    bool enabled;
+    // merkle root for whitelist
+    bytes32 merkleRoot;
+}
+
 enum ClaimStatus {
     NONE,
     PENDING,
@@ -61,6 +68,9 @@ interface IFarm {
     error InvalidDepositNativeAsset();
     error InvalidDepositERC20();
     error InvalidDepositTime(uint256 currentTime, uint256 depositStartTime, uint256 depositEndTime);
+    error InvalidMerkleProof(bytes32[] merkleProof, bytes32 merkleRoot, bytes32 leaf);
+    error WhitelistNotEnabled();
+    error WhitelistEnabled();
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
@@ -83,6 +93,7 @@ interface IFarm {
     event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add, uint256 timestamp);
     event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
     event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
+    event WhitelistConfigUpdated(WhitelistConfig whitelistConfig);
 
     function initialize(
         address underlyingAsset,
@@ -94,6 +105,25 @@ interface IFarm {
         external;
 
     function updateFarmConfig(FarmConfig memory farmConfig) external;
+
+    function updateWhitelistConfig(WhitelistConfig memory _whitelistConfig) external;
+
+    function depositNativeAssetWhitelist(
+        uint256 amount,
+        address depositor,
+        address receiver,
+        bytes32[] calldata merkleProof
+    )
+        external
+        payable;
+
+    function depositERC20Whitelist(
+        uint256 amount,
+        address depositor,
+        address receiver,
+        bytes32[] calldata merkleProof
+    )
+        external;
 
     function depositNativeAsset(uint256 amount, address depositor, address receiver) external payable;
 

@@ -3,11 +3,12 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import { Farm } from "./Farm.sol";
 
-import { DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm } from "./interfaces/IFarm.sol";
+import { DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm, WhitelistConfig } from "./interfaces/IFarm.sol";
 import {
     ClaimAndStakeParams,
     ClaimParams,
     DepositParams,
+    DepositWhitelistParams,
     IFarmManager,
     RequestClaimParams,
     StakePendingClaimParams,
@@ -32,9 +33,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     modifier onlyFarm(address addr) {
         IFarm farm = IFarm(addr);
-        if (!isValidFarm(farm)) {
-            revert InvalidFarm(farm);
-        }
+        if (!isValidFarm(farm)) revert InvalidFarm(farm);
         _;
     }
 
@@ -63,6 +62,11 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit FarmConfigUpdated(farm, farmConfig);
     }
 
+    function updateWhitelistConfig(IFarm farm, WhitelistConfig memory whitelistConfig) external onlyOwner {
+        farm.updateWhitelistConfig(whitelistConfig);
+        emit WhitelistConfigUpdated(farm, whitelistConfig);
+    }
+
     function createFarm(
         IERC20 underlyingAsset,
         IFarm rewardFarm,
@@ -77,13 +81,57 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             (address(underlyingAsset), address(rewardToken), address(rewardFarm), address(this), farmConfig)
         );
         IFarm farm = IFarm(address(new BeaconProxy(address(farmBeacon), initData)));
-        if (isValidFarm(farm)) {
-            revert FarmAlreadyExists(farm);
-        }
+        if (isValidFarm(farm)) revert FarmAlreadyExists(farm);
 
         validFarms[farm] = true;
         emit FarmCreated(farm, underlyingAsset, rewardFarm);
         return address(farm);
+    }
+
+    function depositNativeAssetWhitelist(DepositWhitelistParams memory depositParams) public payable whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) =
+            (depositParams.farm, depositParams.amount, depositParams.receiver, depositParams.merkleProof);
+
+        _checkFarmIsValid(farm);
+
+        if (msg.value < amount) revert InvalidAmount(msg.value, amount);
+
+        farm.depositNativeAssetWhitelist{ value: amount }(amount, msg.sender, receiver, merkleProof);
+
+        emit DepositWhitelist(farm, amount, msg.sender, receiver, merkleProof);
+    }
+
+    function depositNativeAssetWhitelistBatch(DepositWhitelistParams[] memory depositParams)
+        public
+        payable
+        whenNotPaused
+    {
+        uint256[] memory depositAmountArr = new uint256[](depositParams.length);
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            depositAmountArr[i] = depositParams[i].amount;
+        }
+        _checkTotalAmount(depositAmountArr, msg.value);
+
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            depositNativeAssetWhitelist(depositParams[i]);
+        }
+    }
+
+    function depositERC20Whitelist(DepositWhitelistParams memory depositParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) =
+            (depositParams.farm, depositParams.amount, depositParams.receiver, depositParams.merkleProof);
+
+        _checkFarmIsValid(farm);
+
+        farm.depositERC20Whitelist(amount, msg.sender, receiver, merkleProof);
+
+        emit DepositWhitelist(farm, amount, msg.sender, receiver, merkleProof);
+    }
+
+    function depositERC20WhitelistBatch(DepositWhitelistParams[] memory depositParams) public whenNotPaused {
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            depositERC20Whitelist(depositParams[i]);
+        }
     }
 
     function depositNativeAsset(DepositParams memory depositParams) public payable whenNotPaused {
@@ -92,16 +140,20 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        if (msg.value < amount) {
-            revert InvalidAmount(msg.value, amount);
-        }
+        if (msg.value < amount) revert InvalidAmount(msg.value, amount);
+
         farm.depositNativeAsset{ value: amount }(amount, msg.sender, receiver);
 
         emit Deposit(farm, amount, msg.sender, receiver);
     }
 
     function depositNativeAssetBatch(DepositParams[] memory depositParams) public payable whenNotPaused {
-        _checkTotalAmount(depositParams, msg.value);
+        uint256[] memory depositAmountArr = new uint256[](depositParams.length);
+        for (uint256 i = 0; i < depositParams.length; i++) {
+            depositAmountArr[i] = depositParams[i].amount;
+        }
+
+        _checkTotalAmount(depositAmountArr, msg.value);
 
         for (uint256 i = 0; i < depositParams.length; i++) {
             depositNativeAsset(depositParams[i]);
@@ -225,9 +277,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         token.safeTransferFrom(from, address(farm), amount);
         uint256 balanceAfter = token.balanceOf(address(farm));
         uint256 balanceDiff = balanceAfter - balanceBefore;
-        if (balanceDiff != amount) {
-            revert AssetBalanceChangedUnexpectedly(token, farm, from, amount, balanceDiff);
-        }
+        if (balanceDiff != amount) revert AssetBalanceChangedUnexpectedly(token, farm, from, amount, balanceDiff);
     }
 
     // --- external view functions ---
@@ -259,6 +309,10 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return farm.getPendingReward(addr);
     }
 
+    function isDepositEnabled(IFarm farm) external view returns (bool) {
+        return farm.isDepositEnabled();
+    }
+
     function isClaimable(IFarm farm) external view returns (bool) {
         return farm.isClaimable();
     }
@@ -269,19 +323,15 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     // --- internal functions ---
     function _checkFarmIsValid(IFarm farm) internal view {
-        if (!isValidFarm(farm)) {
-            revert InvalidFarm(farm);
-        }
+        if (!isValidFarm(farm)) revert InvalidFarm(farm);
     }
 
-    function _checkTotalAmount(DepositParams[] memory depositParams, uint256 msgValue) internal pure {
+    function _checkTotalAmount(uint256[] memory depositAmountArr, uint256 msgValue) internal pure {
         uint256 totalAmount;
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            totalAmount += depositParams[i].amount;
+        for (uint256 i = 0; i < depositAmountArr.length; i++) {
+            totalAmount += depositAmountArr[i];
         }
 
-        if (msgValue != totalAmount) {
-            revert InvalidAmount(msgValue, totalAmount);
-        }
+        if (msgValue != totalAmount) revert InvalidAmount(msgValue, totalAmount);
     }
 }
