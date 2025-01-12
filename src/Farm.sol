@@ -291,7 +291,7 @@ contract Farm is IFarm, Initializable {
         }
 
         uint256 claimableTime = block.timestamp + farmConfig.claimDelayTime;
-        bytes32 claimId = keccak256(abi.encodePacked(amount, owner, receiver, claimableTime));
+        bytes32 claimId = keccak256(abi.encode(amount, owner, receiver, claimableTime));
         ClaimStatus claimStatus = _claimStatus[claimId];
         if (claimStatus != ClaimStatus.NONE) {
             revert InvalidStatusToRequestClaim(claimStatus);
@@ -498,7 +498,7 @@ contract Farm is IFarm, Initializable {
         internal
         pure
     {
-        bytes32 expectedClaimId = keccak256(abi.encodePacked(amount, owner, receiver, claimableTime));
+        bytes32 expectedClaimId = keccak256(abi.encode(amount, owner, receiver, claimableTime));
         if (claimId != expectedClaimId) {
             revert InvalidClaimId(claimId, expectedClaimId);
         }
@@ -514,7 +514,7 @@ contract Farm is IFarm, Initializable {
         pure
         returns (bytes32)
     {
-        return keccak256(abi.encodePacked(amount, owner, receiver, claimableTime));
+        return keccak256(abi.encode(amount, owner, receiver, claimableTime));
     }
 
     function _checkIsNotZeroAddress(address addr) internal pure {

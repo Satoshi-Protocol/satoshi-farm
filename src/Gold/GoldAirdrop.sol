@@ -1,27 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IMerkleDistributor} from "../interfaces/IMerkleDistributor.sol";
-import {IGold} from "./IGold.sol";
+import { IGold } from "./interfaces/IGold.sol";
+import { IGoldAirdrop } from "./interfaces/IGoldAirdrop.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract GoldAirdrop is IMerkleDistributor, OwnableUpgradeable, UUPSUpgradeable {
+contract GoldAirdrop is IGoldAirdrop, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
-    struct RewardConfig {
-        uint8 startTime;
-        uint8 endTime;
-        uint256 penalty; // (50) 50% penalty
-        address vault;
-    }
-
-    uint256 constant public PENALTY_PRECISION = 100;
     IGold public gold;
+    // airdrop config
+    uint256 public startTime;
+    uint256 public endTime;
     bytes32 public merkleRoot;
-    RewardConfig public rewardConfig;
 
     // This is a packed array of booleans.
     mapping(uint256 => uint256) private claimedBitMap;
@@ -30,13 +24,40 @@ contract GoldAirdrop is IMerkleDistributor, OwnableUpgradeable, UUPSUpgradeable 
         _disableInitializers();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 
-    function initialize(address gold_, bytes32 merkleRoot_) external initializer {
+    function initialize(
+        address _gold,
+        uint256 _startTime,
+        uint256 _endTime,
+        bytes32 _merkleRoot
+    )
+        external
+        initializer
+    {
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
-        gold = IGold(gold_);
-        merkleRoot = merkleRoot_;
+
+        gold = IGold(_gold);
+        startTime = _startTime;
+        endTime = _endTime;
+        merkleRoot = _merkleRoot;
+
+        emit AirdropTimeUpdated(_startTime, _endTime);
+        emit MerkleRootUpdated(_merkleRoot);
+    }
+
+    function setAirdropTime(uint256 _startTime, uint256 _endTime) external onlyOwner {
+        startTime = _startTime;
+        endTime = _endTime;
+
+        emit AirdropTimeUpdated(_startTime, _endTime);
+    }
+
+    function setMerkleRoot(bytes32 _merkleRoot) external onlyOwner {
+        merkleRoot = _merkleRoot;
+
+        emit MerkleRootUpdated(_merkleRoot);
     }
 
     function isClaimed(uint256 index) public view override returns (bool) {
@@ -53,27 +74,24 @@ contract GoldAirdrop is IMerkleDistributor, OwnableUpgradeable, UUPSUpgradeable 
         claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
     }
 
-    function isValidTime(uint8 time) public view returns (bool) {
-        return time >= rewardConfig.startTime && time <= rewardConfig.endTime;
+    function isValidTime() public view returns (bool) {
+        return block.timestamp >= startTime && block.timestamp <= endTime;
     }
 
     // @param amount0 amount of gold to withdraw
-    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof)
-        public
-        virtual
-    {
-        if (!isValidTime(uint8(block.timestamp))) revert InvalidTime();
-        if (isClaimed(index)) revert AlreadyClaimed();
+    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external virtual {
+        if (!isValidTime()) revert InvalidTime(block.timestamp, startTime, endTime);
+        if (isClaimed(index)) revert AlreadyClaimed(index);
 
         // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(index, account, amount));
-        if (!MerkleProof.verify(merkleProof, merkleRoot, node)) revert InvalidProof();
+        bytes32 node = keccak256(abi.encode(index, account, amount));
+        if (!MerkleProof.verify(merkleProof, merkleRoot, node)) revert InvalidProof(merkleProof, merkleRoot, node);
 
         // Mark it claimed and send the token.
         _setClaimed(index);
 
-        // @todo
+        gold.mint(account, amount);
 
-        emit Claimed(index, account, amount);
+        emit Claimed(index, account, amount, node);
     }
 }
