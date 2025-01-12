@@ -67,13 +67,13 @@ contract Farm is IFarm, Initializable {
         emit FarmConfigUpdated(_farmConfig);
     }
 
-    function depositNativeAsset(uint256 amount, address depositor, address receiver) external payable {
+    function depositNativeAsset(uint256 amount, address depositor, address receiver) external payable onlyFarmManager {
         _beforeDeposit(amount, depositor, receiver);
 
         _depositNativeAsset(amount, depositor, receiver);
     }
 
-    function depositERC20(uint256 amount, address depositor, address receiver) external {
+    function depositERC20(uint256 amount, address depositor, address receiver) external onlyFarmManager {
         _beforeDeposit(amount, depositor, receiver);
 
         _depositERC20(amount, depositor, receiver);
