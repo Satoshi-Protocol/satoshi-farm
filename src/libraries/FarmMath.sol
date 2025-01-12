@@ -4,7 +4,6 @@ pragma solidity >=0.8.0 <0.9.0;
 import { FarmConfig } from "../interfaces/IFarm.sol";
 
 library FarmMath {
-    uint256 internal constant PENALTY_RATIO_PRECISION = 1e6;
     uint256 internal constant REWARD_PER_TOKEN_PRECISION = 1e18;
 
     function computeReward(
