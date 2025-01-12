@@ -4,8 +4,8 @@ pragma solidity >=0.8.0 <0.9.0;
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 interface IGold is IERC20 {
-    function wards(address) external view returns (bool);
     function initialize() external;
+    function wards(address) external view returns (bool);
     function rely(address usr) external;
     function deny(address usr) external;
     function mint(address to, uint256 amount) external;

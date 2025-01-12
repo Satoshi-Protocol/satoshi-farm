@@ -26,9 +26,9 @@ interface IGoldAirdrop {
 
     function setMerkleRoot(bytes32 _merkleRoot) external;
 
+    function claim(address account, uint256 amount, bytes32[] calldata merkleProof) external;
+
     function isClaimed(bytes32 leaf) external view returns (bool);
 
     function isValidTime() external returns (bool);
-
-    function claim(address account, uint256 amount, bytes32[] calldata merkleProof) external;
 }
