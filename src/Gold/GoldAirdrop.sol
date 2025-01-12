@@ -16,9 +16,7 @@ contract GoldAirdrop is IGoldAirdrop, OwnableUpgradeable, UUPSUpgradeable {
     uint256 public startTime;
     uint256 public endTime;
     bytes32 public merkleRoot;
-
-    // This is a packed array of booleans.
-    mapping(uint256 => uint256) private claimedBitMap;
+    mapping(bytes32 => bool) internal _claimed;
 
     constructor() {
         _disableInitializers();
@@ -60,38 +58,36 @@ contract GoldAirdrop is IGoldAirdrop, OwnableUpgradeable, UUPSUpgradeable {
         emit MerkleRootUpdated(_merkleRoot);
     }
 
-    function isClaimed(uint256 index) public view override returns (bool) {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        uint256 claimedWord = claimedBitMap[claimedWordIndex];
-        uint256 mask = (1 << claimedBitIndex);
-        return claimedWord & mask == mask;
+    function claim(address account, uint256 amount, bytes32[] calldata merkleProof) external {
+        if (!isValidTime()) revert InvalidTime(block.timestamp, startTime, endTime);
+
+        // Verify the merkle proof
+        bytes32 leaf = keccak256(abi.encode(account, amount));
+        if (_isClaimed(leaf)) revert AlreadyClaimed(leaf);
+        if (!MerkleProof.verify(merkleProof, merkleRoot, leaf)) revert InvalidProof(merkleProof, merkleRoot, leaf);
+
+        // update claimed
+        _setClaimed(leaf);
+
+        // mint gold
+        gold.mint(account, amount);
+
+        emit Claimed(leaf, account, amount);
     }
 
-    function _setClaimed(uint256 index) private {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+    function isClaimed(bytes32 leaf) external view returns (bool) {
+        return _isClaimed(leaf);
     }
 
     function isValidTime() public view returns (bool) {
         return block.timestamp >= startTime && block.timestamp <= endTime;
     }
 
-    // @param amount0 amount of gold to withdraw
-    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external virtual {
-        if (!isValidTime()) revert InvalidTime(block.timestamp, startTime, endTime);
-        if (isClaimed(index)) revert AlreadyClaimed(index);
+    function _isClaimed(bytes32 leaf) internal view returns (bool) {
+        return _claimed[leaf];
+    }
 
-        // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encode(index, account, amount));
-        if (!MerkleProof.verify(merkleProof, merkleRoot, node)) revert InvalidProof(merkleProof, merkleRoot, node);
-
-        // Mark it claimed and send the token.
-        _setClaimed(index);
-
-        gold.mint(account, amount);
-
-        emit Claimed(index, account, amount, node);
+    function _setClaimed(bytes32 leaf) internal {
+        _claimed[leaf] = true;
     }
 }

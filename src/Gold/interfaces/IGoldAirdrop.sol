@@ -5,12 +5,12 @@ import { IGold } from "./IGold.sol";
 
 interface IGoldAirdrop {
     error InvalidTime(uint256 currentTime, uint256 startTime, uint256 endTime);
-    error AlreadyClaimed(uint256 index);
-    error InvalidProof(bytes32[] merkleProof, bytes32 merkleRoot, bytes32 node);
+    error AlreadyClaimed(bytes32 leaf);
+    error InvalidProof(bytes32[] merkleProof, bytes32 merkleRoot, bytes32 leaf);
 
     event AirdropTimeUpdated(uint256 indexed startTime, uint256 indexed endTime);
     event MerkleRootUpdated(bytes32 indexed merkleRoot);
-    event Claimed(uint256 indexed index, address indexed account, uint256 indexed amount, bytes32 node);
+    event Claimed(bytes32 indexed leaf, address indexed account, uint256 indexed amount);
 
     function gold() external view returns (IGold);
 
@@ -26,9 +26,9 @@ interface IGoldAirdrop {
 
     function setMerkleRoot(bytes32 _merkleRoot) external;
 
-    function isClaimed(uint256 index) external view returns (bool);
+    function isClaimed(bytes32 leaf) external view returns (bool);
 
     function isValidTime() external returns (bool);
 
-    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external;
+    function claim(address account, uint256 amount, bytes32[] calldata merkleProof) external;
 }
