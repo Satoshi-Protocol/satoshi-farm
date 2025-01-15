@@ -10,6 +10,9 @@ import {
     DepositParams,
     DepositWhitelistParams,
     IFarmManager,
+    LzConfig,
+    RewardInfo,
+    LZ_COMPOSE_OPT,
     RequestClaimParams,
     StakePendingClaimParams,
     WithdrawParams
@@ -23,13 +26,20 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SendParam, MessagingFee } from "./interfaces/layerzero/IOFT.sol";
+import { OFTComposeMsgCodec } from "./interfaces/layerzero/OFTComposeMsgCodec.sol";
+import { IOAppComposer } from "./interfaces/layerzero/IOAppComposer.sol";
 
-contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable {
+
+contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable, IOAppComposer {
     using SafeERC20 for IERC20;
 
-    IRewardToken public rewardToken;
+    // IRewardToken public rewardToken;
     IBeacon public farmBeacon;
     mapping(IFarm => bool) public validFarms;
+
+    LzConfig public lzConfig;
+    RewardInfo public rewardInfo;
 
     modifier onlyFarm(address addr) {
         IFarm farm = IFarm(addr);
@@ -39,13 +49,18 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 
-    function initialize(IRewardToken _rewardToken, IBeacon _farmBeacon) external initializer {
+    function initialize(
+        IBeacon _farmBeacon, 
+        RewardInfo memory _rewardInfo,
+        LzConfig memory _lzConfig
+    ) external initializer {
         __Ownable_init(msg.sender);
         __Pausable_init();
         __UUPSUpgradeable_init();
 
-        rewardToken = _rewardToken;
         farmBeacon = _farmBeacon;
+        rewardInfo = _rewardInfo;
+        lzConfig = _lzConfig;
     }
 
     // --- onlyOwner functions ---
@@ -55,6 +70,14 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     function resume() external onlyOwner {
         _unpause();
+    }
+
+    function updateLzConfig(LzConfig memory _lzConfig) external onlyOwner {
+        lzConfig = _lzConfig;
+    }
+
+    function updateRewardInfo(RewardInfo memory _rewardInfo) external onlyOwner {
+        rewardInfo = _rewardInfo;
     }
 
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external onlyOwner {
@@ -69,7 +92,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     function createFarm(
         IERC20 underlyingAsset,
-        IFarm rewardFarm,
         FarmConfig memory farmConfig
     )
         external
@@ -78,13 +100,13 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     {
         bytes memory initData = abi.encodeCall(
             IFarm.initialize,
-            (address(underlyingAsset), address(rewardToken), address(rewardFarm), address(this), farmConfig)
+            (address(underlyingAsset), address(this), farmConfig)
         );
         IFarm farm = IFarm(address(new BeaconProxy(address(farmBeacon), initData)));
         if (isValidFarm(farm)) revert FarmAlreadyExists(farm);
 
         validFarms[farm] = true;
-        emit FarmCreated(farm, underlyingAsset, rewardFarm);
+        emit FarmCreated(farm, underlyingAsset, rewardInfo.rewardFarm);
         return address(farm);
     }
 
@@ -225,7 +247,16 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         }
     }
 
-    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) public whenNotPaused {
+    function mintRewardCallback(address to, uint256 amount) external onlyFarm(msg.sender) {
+        IFarm farm = IFarm(msg.sender);
+
+        try rewardInfo.rewardToken.mint(to, amount) { }
+        catch {
+            revert MintRewardTokenFailed(rewardInfo.rewardToken, farm, amount);
+        }
+    }
+
+    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams, MessagingFee calldata fee, bytes memory extraOptions) payable public whenNotPaused {
         (IFarm farm, uint256 amount, address receiver, uint256 claimableTime, bytes32 claimId) = (
             stakePendingClaimParams.farm,
             stakePendingClaimParams.amount,
@@ -235,38 +266,36 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         );
         _checkFarmIsValid(farm);
 
-        farm.stakePendingClaim(amount, msg.sender, receiver, claimableTime, claimId);
+        farm.instantClaimFromPending(amount, msg.sender, receiver, claimableTime, claimId, address(this));
+
+        _stake(receiver, amount, fee, extraOptions);
+
         emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
     }
 
-    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParams) public whenNotPaused {
-        for (uint256 i = 0; i < stakePendingClaimParams.length; i++) {
-            stakePendingClaim(stakePendingClaimParams[i]);
-        }
-    }
-
-    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) public whenNotPaused {
+    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams, MessagingFee calldata fee, bytes memory extraOptions) payable public whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (claimAndStakeParams.farm, claimAndStakeParams.amount, claimAndStakeParams.receiver);
 
         _checkFarmIsValid(farm);
 
-        uint256 claimAndStakeAmt = farm.claimAndStake(amount, msg.sender, receiver);
+        uint256 claimAndStakeAmt = farm.instantClaim(amount, msg.sender, address(this));
+
+        _stake(receiver, claimAndStakeAmt, fee, extraOptions);
+
         emit ClaimAndStake(farm, claimAndStakeAmt, msg.sender, receiver);
     }
 
-    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParams) public whenNotPaused {
-        for (uint256 i = 0; i < claimAndStakeParams.length; i++) {
-            claimAndStake(claimAndStakeParams[i]);
-        }
-    }
-
-    function mintRewardCallback(address to, uint256 amount) external onlyFarm(msg.sender) {
-        IFarm farm = IFarm(msg.sender);
-
-        try rewardToken.mint(to, amount) { }
-        catch {
-            revert MintRewardTokenFailed(rewardToken, farm, amount);
+    function _stake(address receiver, uint256 amount, MessagingFee calldata fee, bytes memory extraOptions) internal onlyFarm(msg.sender) {
+        if(isRewardFarmNative()) {
+            DepositParams memory depositParams = DepositParams({ farm: rewardInfo.rewardFarm, amount: amount, receiver: receiver });
+            rewardInfo.rewardToken.approve(address(rewardInfo.rewardFarm), amount);
+            depositERC20(depositParams);
+        } else {
+            SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
+            MessagingFee memory expectFee = rewardInfo.rewardToken.quoteSend(sendParam, false);
+            require(expectFee.nativeFee == msg.value, "Invalid fee");
+            rewardInfo.rewardToken.send{value: msg.value}(sendParam, fee, lzConfig.refundAddress);
         }
     }
 
@@ -333,5 +362,66 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         }
 
         if (msgValue != totalAmount) revert InvalidAmount(msgValue, totalAmount);
+    }
+
+    function checkValidRewardToken() external {
+
+    }
+
+    /// @notice Handles incoming composed messages from LayerZero.
+    /// @dev Decodes the message payload to perform a token swap.
+    ///      This method expects the encoded compose message to contain the swap amount and recipient address.
+    /// @param _oApp The address of the originating OApp.
+    /// @param /*_guid*/ The globally unique identifier of the message (unused in this mock).
+    /// @param _message The encoded message content in the format of the OFTComposeMsgCodec.
+    /// @param /*Executor*/ Executor address (unused in this mock).
+    /// @param /*Executor Data*/ Additional data for checking for a specific executor (unused in this mock).
+    function lzCompose(
+        address _oApp,
+        bytes32 /*_guid*/,
+        bytes calldata _message,
+        address /*Executor*/,
+        bytes calldata /*Executor Data*/
+    ) external payable override {
+        require(_oApp == address(rewardInfo.rewardToken), "!oApp");
+        require(msg.sender == lzConfig.endpoint, "!endpoint");
+        // Extract the composed message from the delivered message using the MsgCodec
+        (LZ_COMPOSE_OPT opt, bytes memory data) = abi.decode(OFTComposeMsgCodec.composeMsg(_message), (LZ_COMPOSE_OPT, bytes));
+        if(opt == LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN) {
+            uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
+            (DepositParams memory depositParams) = abi.decode(data, (DepositParams));
+            require(_amountLD == depositParams.amount, "invalid receive amount");
+            rewardInfo.rewardToken.approve(address(depositParams.farm), depositParams.amount);
+            depositERC20(depositParams);
+        } else {
+            revert("Invalid opt");
+        }
+    }
+    
+    function isRewardFarmNative() view public returns (bool) {
+        return lzConfig.eid == rewardInfo.dstEid;
+    }
+    
+    function formatLzDepositRewardSendParam(address receiver, uint256 amount, bytes memory extraOptions) view public returns (SendParam memory sendParam) {
+        bytes memory composeMsg = abi.encode(
+            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN,
+            abi.encode(
+                DepositParams(
+                    rewardInfo.rewardFarm,
+                    amount,
+                    receiver
+                )
+            )
+        );
+
+        sendParam = SendParam(
+            rewardInfo.dstEid,
+            rewardInfo.rewardFarmBytes32,
+            amount,
+            amount,
+            extraOptions,
+            composeMsg,
+            "" // oftCmd
+        );
     }
 }

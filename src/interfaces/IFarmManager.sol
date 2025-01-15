@@ -6,6 +6,10 @@ import { IRewardToken } from "./IRewardToken.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import { SendParam, MessagingFee } from "./layerzero/IOFT.sol";
+
+enum LZ_COMPOSE_OPT { NONE, DEPOSIT_REWARD_TOKEN }
+
 
 struct DepositWhitelistParams {
     IFarm farm;
@@ -54,6 +58,18 @@ struct ClaimAndStakeParams {
     address receiver;
 }
 
+struct LzConfig {
+    uint32 eid;
+    address endpoint;
+    address refundAddress;
+}
+struct RewardInfo {
+    uint32 dstEid; // Destination layerzero endpoint ID, if 0, then rewardToken is in native chain.
+    IFarm rewardFarm;
+    bytes32 rewardFarmBytes32;
+    IRewardToken rewardToken;
+}
+
 interface IFarmManager {
     error InvalidFarm(IFarm farm);
     error InvalidAdmin(address expected, address actual);
@@ -96,13 +112,16 @@ interface IFarmManager {
     );
     event ClaimAndStake(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
 
-    function initialize(IRewardToken rewardToken, IBeacon farmBeacon) external;
+    function initialize(
+        IBeacon farmBeacon, 
+        RewardInfo memory _rewardInfo,
+        LzConfig memory _lzConfig
+    ) external;
 
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external;
 
     function createFarm(
         IERC20 underlyingAsset,
-        IFarm rewardFarm,
         FarmConfig memory farmConfig
     )
         external
@@ -136,13 +155,13 @@ interface IFarmManager {
 
     function claimBatch(ClaimParams[] memory claimParams) external;
 
-    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) external;
+    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams, MessagingFee calldata fee, bytes memory extraOptions) payable external;
 
-    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParams) external;
+    // function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParams) payable external;
 
-    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) external;
+    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams, MessagingFee calldata fee, bytes memory extraOptions) payable external;
 
-    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParams) external;
+    // function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParams) payable external;
 
     function mintRewardCallback(address to, uint256 amount) external;
 
@@ -167,4 +186,24 @@ interface IFarmManager {
     function isClaimable(IFarm farm) external view returns (bool);
 
     function isValidFarm(IFarm farm) external view returns (bool);
+
+    function lzConfig() external returns (
+        uint32 eid,
+        address endpoint,
+        address refundAddress
+    );
+    function updateLzConfig(LzConfig memory config) external;
+
+    function rewardInfo() external view returns (
+        uint32 dstEid,
+        IFarm rewardFarm,
+        bytes32 rewardFarmBytes32,
+        IRewardToken rewardToken
+    );
+
+    function updateRewardInfo(RewardInfo memory _rewardInfo) external;
+
+    function isRewardFarmNative() view external returns (bool);
+
+    function formatLzDepositRewardSendParam(address receiver, uint256 amount, bytes memory extraOptions) view external returns (SendParam memory sendParam);
 }

@@ -60,9 +60,8 @@ interface IFarm {
     error InvalidClaimId(bytes32 claimId, bytes32 expectedClaimId);
     error ZeroPendingRewards();
     error RequestClaimFirst();
-    error ClaimAndStakeDisabled();
     error InvalidStatusToRequestClaim(ClaimStatus status);
-    error InvalidStatusToStakePendingClaim(ClaimStatus status);
+    error InvalidStatusToInstantClaimPending(ClaimStatus status);
     error InvalidAmount(uint256 msgValue, uint256 amount);
     error TransferNativeAssetFailed();
     error InvalidDepositNativeAsset();
@@ -85,15 +84,6 @@ interface IFarm {
     event RewardClaimed(
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
     );
-    event StakePendingClaim(
-        bytes32 indexed claimId,
-        IFarm rewardFarm,
-        uint256 indexed amount,
-        address owner,
-        address receiver,
-        uint256 claimableTime
-    );
-    event ClaimAndStake(IFarm rewardFarm, uint256 indexed amount, address owner, address receiver);
     event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add, uint256 timestamp);
     event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
     event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
@@ -101,8 +91,6 @@ interface IFarm {
 
     function initialize(
         address underlyingAsset,
-        address rewardToken,
-        address rewardFarm,
         address farmManager,
         FarmConfig memory farmConfig
     )
@@ -145,16 +133,16 @@ interface IFarm {
 
     function claim(uint256 amount, address owner, address receiver, uint256 claimableTime, bytes32 claimId) external;
 
-    function stakePendingClaim(
+    function instantClaimFromPending(
         uint256 amount,
         address owner,
         address receiver,
         uint256 claimableTime,
-        bytes32 claimId
-    )
-        external;
+        bytes32 claimId,
+        address claimReceiver
+    ) external;
 
-    function claimAndStake(uint256 amount, address owner, address receiver) external returns (uint256);
+    function instantClaim(uint256 amount, address owner, address receiver) external returns (uint256);
 
     function totalShares() external view returns (uint256);
 
@@ -175,8 +163,6 @@ interface IFarm {
     function isClaimable() external view returns (bool);
 
     function isDepositEnabled() external view returns (bool);
-
-    function rewardToken() external view returns (IRewardToken);
 
     function underlyingAsset() external view returns (IERC20);
 

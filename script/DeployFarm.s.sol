@@ -32,7 +32,7 @@ contract DeploySetupScript is Script, DeployFarmConfig {
         vm.startBroadcast(OWNER_PRIVATE_KEY);
 
         // deploy farm
-        IFarm farm = IFarm(address(farmManager.createFarm(underlyingAsset, rewardFarm, FARM_CONFIG)));
+        IFarm farm = IFarm(address(farmManager.createFarm(underlyingAsset, FARM_CONFIG)));
 
         vm.stopBroadcast();
 

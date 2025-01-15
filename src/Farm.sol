@@ -11,6 +11,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { OFTComposeMsgCodec } from "./interfaces/layerzero/OFTComposeMsgCodec.sol";
 
 contract Farm is IFarm, Initializable {
     using SafeERC20 for IERC20;
@@ -18,15 +19,14 @@ contract Farm is IFarm, Initializable {
 
     // --- state variables ---
     IERC20 public underlyingAsset;
-    IFarm public rewardFarm;
     IFarmManager public farmManager;
-    IRewardToken public rewardToken;
     FarmConfig public farmConfig;
     WhitelistConfig public whitelistConfig;
 
     uint256 internal _totalShares;
     uint256 internal _lastRewardPerToken;
     uint256 internal _lastUpdateTime;
+
     mapping(address => uint256) internal _shares;
     mapping(address => uint256) internal _lastUserRewardPerToken;
     mapping(address => uint256) internal _pendingRewards;
@@ -58,8 +58,6 @@ contract Farm is IFarm, Initializable {
 
     function initialize(
         address _underlyingAsset,
-        address _rewardToken,
-        address _rewardFarm,
         address _farmManager,
         FarmConfig memory _farmConfig
     )
@@ -67,19 +65,16 @@ contract Farm is IFarm, Initializable {
         initializer
     {
         _checkIsNotZeroAddress(_underlyingAsset);
-        _checkIsNotZeroAddress(_rewardToken);
         _checkIsNotZeroAddress(_farmManager);
-        // rewardFarm can be zero address
         _checkFarmConfig(_farmConfig);
 
         underlyingAsset = IERC20(_underlyingAsset);
-        rewardToken = IRewardToken(_rewardToken);
-        rewardFarm = IFarm(_rewardFarm);
         farmManager = IFarmManager(_farmManager);
         farmConfig = _farmConfig;
 
         emit FarmConfigUpdated(_farmConfig);
     }
+
 
     function updateFarmConfig(FarmConfig memory _farmConfig) external onlyFarmManager {
         _checkFarmConfig(_farmConfig);
@@ -190,22 +185,22 @@ contract Farm is IFarm, Initializable {
         _claim(amount, owner, receiver, claimableTime, claimId);
     }
 
-    function stakePendingClaim(
+    function instantClaimFromPending(
         uint256 amount,
         address owner,
         address receiver,
         uint256 claimableTime,
-        bytes32 claimId
-    )
-        external
+        bytes32 claimId,
+        address claimReceiver
+    ) external
         onlyFarmManager
     {
-        _beforeStakePendingClaim(amount, owner, receiver, claimableTime, claimId);
+        _beforeInstantClaimFromPending(amount, owner, receiver, claimableTime, claimId);
 
-        _stakePendingClaim(amount, owner, receiver, claimableTime, claimId);
+        _instantClaimFromPending(claimId, amount, claimReceiver);
     }
 
-    function claimAndStake(
+    function instantClaim(
         uint256 amount,
         address owner,
         address receiver
@@ -214,9 +209,9 @@ contract Farm is IFarm, Initializable {
         onlyFarmManager
         returns (uint256)
     {
-        _beforeClaimAndStake(amount, owner, receiver);
+        _beforeInstantClaim(amount, owner, receiver);
 
-        uint256 claimAndStakeAmt = _claimAndStake(amount, owner, receiver);
+        uint256 claimAndStakeAmt = _instantClaim(amount, owner, receiver);
 
         return claimAndStakeAmt;
     }
@@ -272,10 +267,6 @@ contract Farm is IFarm, Initializable {
 
     function _checkIsClaimable() internal view {
         if (!_isClaimable()) revert InvalidClaimTime(block.timestamp);
-    }
-
-    function _checkIsClaimAndStakeEnabled() internal view {
-        if (!_isClaimAndStakeEnabled()) revert ClaimAndStakeDisabled();
     }
 
     function _isDepositEnabled() internal view returns (bool) {
@@ -423,7 +414,7 @@ contract Farm is IFarm, Initializable {
         emit RewardClaimed(claimId, amount, owner, receiver, claimableTime);
     }
 
-    function _beforeStakePendingClaim(
+    function _beforeInstantClaimFromPending(
         uint256 amount,
         address owner,
         address receiver,
@@ -437,39 +428,27 @@ contract Farm is IFarm, Initializable {
 
         ClaimStatus claimStatus = _claimStatus[claimId];
 
-        if (claimStatus != ClaimStatus.PENDING) revert InvalidStatusToStakePendingClaim(claimStatus);
+        if (claimStatus != ClaimStatus.PENDING) revert InvalidStatusToInstantClaimPending(claimStatus);
     }
 
-    function _stakePendingClaim(
+    function _instantClaimFromPending(
+        bytes32 claimId,
         uint256 amount,
-        address owner,
-        address receiver,
-        uint256 claimableTime,
-        bytes32 claimId
+        address receiver
     )
         internal
     {
         _claimStatus[claimId] = ClaimStatus.CLAIMED;
-
-        // mint reward to address(this)
-        farmManager.mintRewardCallback(address(this), amount);
-
-        // stake(deposit) the reward to rewardFarm
-        rewardToken.approve(address(farmManager), amount);
-
-        DepositParams memory depositParams = DepositParams({ farm: rewardFarm, amount: amount, receiver: receiver });
-        farmManager.depositERC20(depositParams);
-        emit StakePendingClaim(claimId, rewardFarm, amount, owner, receiver, claimableTime);
+        farmManager.mintRewardCallback(receiver, amount);
     }
 
-    function _beforeClaimAndStake(uint256, address owner, address) internal {
+    function _beforeInstantClaim(uint256, address owner, address) internal {
         _checkIsClaimable();
-        _checkIsClaimAndStakeEnabled();
 
         _updateReward(owner);
     }
 
-    function _claimAndStake(uint256 amount, address owner, address receiver) internal returns (uint256) {
+    function _instantClaim(uint256 amount, address owner, address receiver) internal returns (uint256) {
         uint256 pendingRewards = _pendingRewards[owner];
         if (pendingRewards == 0) revert ZeroPendingRewards();
 
@@ -480,21 +459,11 @@ contract Farm is IFarm, Initializable {
 
         // update state
         _updatePendingReward(owner, amount, false);
-
-        //TODO: add cross chain claim and stake (call manager to mint reward and do cross chain deposit)
-
-        // mint reward to address(this)
-        farmManager.mintRewardCallback(address(this), amount);
-
-        // stake(deposit) the reward to rewardFarm
-        rewardToken.approve(address(farmManager), amount);
-
-        DepositParams memory depositParams = DepositParams({ farm: rewardFarm, amount: amount, receiver: receiver });
-        farmManager.depositERC20(depositParams);
-        emit ClaimAndStake(rewardFarm, amount, owner, receiver);
-
+        farmManager.mintRewardCallback(receiver, amount);
         return amount;
     }
+
+
 
     function _updateShares(uint256 amount, address addr, bool add) internal {
         if (add) {
@@ -601,4 +570,5 @@ contract Farm is IFarm, Initializable {
             revert InvalidConfigDepositCap(_farmConfig.depositCap, _farmConfig.depositCapPerUser);
         }
     }
+
 }
