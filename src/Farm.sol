@@ -7,11 +7,11 @@ import { DepositParams, IFarmManager } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
 import { FarmMath } from "./libraries/FarmMath.sol";
 
+import { OFTComposeMsgCodec } from "./interfaces/layerzero/OFTComposeMsgCodec.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { OFTComposeMsgCodec } from "./interfaces/layerzero/OFTComposeMsgCodec.sol";
 
 contract Farm is IFarm, Initializable {
     using SafeERC20 for IERC20;
@@ -35,7 +35,6 @@ contract Farm is IFarm, Initializable {
 
     modifier onlyFarmManager() {
         if (msg.sender != address(farmManager)) revert InvalidFarmManager(msg.sender);
-
         _;
     }
 
@@ -46,13 +45,11 @@ contract Farm is IFarm, Initializable {
         if (!MerkleProof.verify(merkleProof, whitelistConfig.merkleRoot, leaf)) {
             revert InvalidMerkleProof(merkleProof, whitelistConfig.merkleRoot, leaf);
         }
-
         _;
     }
 
     modifier onlyWhitelistNotEnabled() {
         if (whitelistConfig.enabled) revert WhitelistEnabled();
-
         _;
     }
 
@@ -75,7 +72,6 @@ contract Farm is IFarm, Initializable {
         emit FarmConfigUpdated(_farmConfig);
     }
 
-
     function updateFarmConfig(FarmConfig memory _farmConfig) external onlyFarmManager {
         _checkFarmConfig(_farmConfig);
         _updateLastRewardPerToken(_calcRewardPerToken());
@@ -88,7 +84,7 @@ contract Farm is IFarm, Initializable {
         emit WhitelistConfigUpdated(_whitelistConfig);
     }
 
-    function depositNativeAssetWhitelist(
+    function depositNativeAssetWithProof(
         uint256 amount,
         address depositor,
         address receiver,
@@ -104,7 +100,7 @@ contract Farm is IFarm, Initializable {
         _depositNativeAsset(amount, depositor, receiver);
     }
 
-    function depositERC20Whitelist(
+    function depositERC20WithProof(
         uint256 amount,
         address depositor,
         address receiver,
@@ -170,7 +166,7 @@ contract Farm is IFarm, Initializable {
         return (claimAmt, claimableTime, claimId);
     }
 
-    function claim(
+    function executeClaim(
         uint256 amount,
         address owner,
         address receiver,
@@ -180,35 +176,27 @@ contract Farm is IFarm, Initializable {
         external
         onlyFarmManager
     {
-        _beforeClaim(amount, owner, receiver, claimableTime, claimId);
+        _beforeExecuteClaim(amount, owner, receiver, claimableTime, claimId);
 
-        _claim(amount, owner, receiver, claimableTime, claimId);
+        _executeClaim(amount, owner, receiver, claimableTime, claimId);
     }
 
-    function instantClaimFromPending(
+    function forceExecuteClaim(
         uint256 amount,
         address owner,
         address receiver,
         uint256 claimableTime,
-        bytes32 claimId,
-        address claimReceiver
-    ) external
-        onlyFarmManager
-    {
-        _beforeInstantClaimFromPending(amount, owner, receiver, claimableTime, claimId);
-
-        _instantClaimFromPending(claimId, amount, claimReceiver);
-    }
-
-    function instantClaim(
-        uint256 amount,
-        address owner,
-        address receiver
+        bytes32 claimId
     )
         external
         onlyFarmManager
-        returns (uint256)
     {
+        _beforeForceExecuteClaim(amount, owner, receiver, claimableTime, claimId);
+
+        _forceExecuteClaim(amount, owner, receiver, claimableTime, claimId);
+    }
+
+    function instantClaim(uint256 amount, address owner, address receiver) external onlyFarmManager returns (uint256) {
         _beforeInstantClaim(amount, owner, receiver);
 
         uint256 claimAndStakeAmt = _instantClaim(amount, owner, receiver);
@@ -269,6 +257,10 @@ contract Farm is IFarm, Initializable {
         if (!_isClaimable()) revert InvalidClaimTime(block.timestamp);
     }
 
+    function _checkIsInstantClaimEnabled() internal view {
+        if (!_isInstantClaimEnabled()) revert InstantClaimNotEnabled();
+    }
+
     function _isDepositEnabled() internal view returns (bool) {
         return block.timestamp >= farmConfig.depositStartTime && block.timestamp <= farmConfig.depositEndTime;
     }
@@ -277,8 +269,8 @@ contract Farm is IFarm, Initializable {
         return block.timestamp >= farmConfig.claimStartTime && block.timestamp <= farmConfig.claimEndTime;
     }
 
-    function _isClaimAndStakeEnabled() internal view returns (bool) {
-        return farmConfig.claimAndStakeEnabled;
+    function _isInstantClaimEnabled() internal view returns (bool) {
+        return farmConfig.instantClaimEnabled;
     }
 
     function _beforeDeposit(uint256 amount, address, address receiver) internal {
@@ -373,7 +365,7 @@ contract Farm is IFarm, Initializable {
         return (amount, claimableTime, claimId);
     }
 
-    function _beforeClaim(
+    function _beforeExecuteClaim(
         uint256 amount,
         address owner,
         address receiver,
@@ -406,15 +398,23 @@ contract Farm is IFarm, Initializable {
         }
     }
 
-    function _claim(uint256 amount, address owner, address receiver, uint256 claimableTime, bytes32 claimId) internal {
+    function _executeClaim(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        bytes32 claimId
+    )
+        internal
+    {
         _claimStatus[claimId] = ClaimStatus.CLAIMED;
 
         // mint reward to receiver
         farmManager.mintRewardCallback(receiver, amount);
-        emit RewardClaimed(claimId, amount, owner, receiver, claimableTime);
+        emit ClaimExecuted(claimId, amount, owner, receiver, claimableTime);
     }
 
-    function _beforeInstantClaimFromPending(
+    function _beforeForceExecuteClaim(
         uint256 amount,
         address owner,
         address receiver,
@@ -431,19 +431,17 @@ contract Farm is IFarm, Initializable {
         if (claimStatus != ClaimStatus.PENDING) revert InvalidStatusToInstantClaimPending(claimStatus);
     }
 
-    function _instantClaimFromPending(
-        bytes32 claimId,
-        uint256 amount,
-        address receiver
-    )
-        internal
-    {
+    function _forceExecuteClaim(uint256 amount, address owner, address receiver, uint256, bytes32 claimId) internal {
         _claimStatus[claimId] = ClaimStatus.CLAIMED;
-        farmManager.mintRewardCallback(receiver, amount);
+
+        farmManager.mintRewardCallback(address(farmManager), amount);
+
+        emit ForceClaimExecuted(claimId, amount, owner, receiver);
     }
 
     function _beforeInstantClaim(uint256, address owner, address) internal {
         _checkIsClaimable();
+        _checkIsInstantClaimEnabled();
 
         _updateReward(owner);
     }
@@ -460,10 +458,11 @@ contract Farm is IFarm, Initializable {
         // update state
         _updatePendingReward(owner, amount, false);
         farmManager.mintRewardCallback(receiver, amount);
+
+        emit InstantClaimed(amount, owner, receiver);
+
         return amount;
     }
-
-
 
     function _updateShares(uint256 amount, address addr, bool add) internal {
         if (add) {
@@ -570,5 +569,4 @@ contract Farm is IFarm, Initializable {
             revert InvalidConfigDepositCap(_farmConfig.depositCap, _farmConfig.depositCapPerUser);
         }
     }
-
 }

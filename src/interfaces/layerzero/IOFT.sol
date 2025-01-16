@@ -65,19 +65,17 @@ interface IOFT {
     error SlippageExceeded(uint256 amountLD, uint256 minAmountLD);
 
     // Events
-    event OFTSent(
-        bytes32 indexed guid, // GUID of the OFT message.
-        uint32 dstEid, // Destination Endpoint ID.
-        address indexed fromAddress, // Address of the sender on the src chain.
-        uint256 amountSentLD, // Amount of tokens sent in local decimals.
-        uint256 amountReceivedLD // Amount of tokens received in local decimals.
-    );
-    event OFTReceived(
-        bytes32 indexed guid, // GUID of the OFT message.
-        uint32 srcEid, // Source Endpoint ID.
-        address indexed toAddress, // Address of the recipient on the dst chain.
-        uint256 amountReceivedLD // Amount of tokens received in local decimals.
-    );
+    event OFTSent( // GUID of the OFT message.
+        // Destination Endpoint ID.
+        // Address of the sender on the src chain.
+        // Amount of tokens sent in local decimals.
+        // Amount of tokens received in local decimals.
+    bytes32 indexed guid, uint32 dstEid, address indexed fromAddress, uint256 amountSentLD, uint256 amountReceivedLD);
+    event OFTReceived( // GUID of the OFT message.
+        // Source Endpoint ID.
+        // Address of the recipient on the dst chain.
+        // Amount of tokens received in local decimals.
+    bytes32 indexed guid, uint32 srcEid, address indexed toAddress, uint256 amountReceivedLD);
 
     /**
      * @notice Retrieves interfaceID and the version of the OFT.
@@ -119,9 +117,10 @@ interface IOFT {
      * @return oftFeeDetails The details of OFT fees.
      * @return receipt The OFT receipt information.
      */
-    function quoteOFT(
-        SendParam calldata _sendParam
-    ) external view returns (OFTLimit memory, OFTFeeDetail[] memory oftFeeDetails, OFTReceipt memory);
+    function quoteOFT(SendParam calldata _sendParam)
+        external
+        view
+        returns (OFTLimit memory, OFTFeeDetail[] memory oftFeeDetails, OFTReceipt memory);
 
     /**
      * @notice Provides a quote for the send() operation.
@@ -154,5 +153,8 @@ interface IOFT {
         SendParam calldata _sendParam,
         MessagingFee calldata _fee,
         address _refundAddress
-    ) external payable returns (MessagingReceipt memory, OFTReceipt memory);
+    )
+        external
+        payable
+        returns (MessagingReceipt memory, OFTReceipt memory);
 }

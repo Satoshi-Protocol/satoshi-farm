@@ -19,7 +19,9 @@ interface ILayerZeroComposer {
         bytes calldata _message,
         address _executor,
         bytes calldata _extraData
-    ) external payable;
+    )
+        external
+        payable;
 }
 
 /**
@@ -27,4 +29,4 @@ interface ILayerZeroComposer {
  * @dev This interface defines the OApp Composer, allowing developers to inherit only the OApp package without the protocol.
  */
 // solhint-disable-next-line no-empty-blocks
-interface IOAppComposer is ILayerZeroComposer {}
+interface IOAppComposer is ILayerZeroComposer { }

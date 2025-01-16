@@ -5,7 +5,7 @@ import { Farm } from "../src/Farm.sol";
 
 import { FarmManager } from "../src/FarmManager.sol";
 import { FarmConfig, IFarm } from "../src/interfaces/IFarm.sol";
-import { IFarmManager, RewardInfo, LzConfig } from "../src/interfaces/IFarmManager.sol";
+import { IFarmManager, LzConfig, RewardInfo } from "../src/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../src/interfaces/IRewardToken.sol";
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -56,7 +56,8 @@ contract DeploySetupScript is Script, DeploySetupConfig {
         // deploy farm manager proxy
         RewardInfo memory rewardInfo;
         LzConfig memory lzConfig;
-        bytes memory data = abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardInfo, lzConfig));
+        FarmConfig memory farmConfig;
+        bytes memory data = abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardInfo, lzConfig, farmConfig));
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
         // deploy reward farm

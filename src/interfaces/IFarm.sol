@@ -29,8 +29,8 @@ struct FarmConfig {
     uint256 claimEndTime;
     // delay time for claim
     uint256 claimDelayTime;
-    // is claim and stake enabled
-    bool claimAndStakeEnabled;
+    // is instant claim enabled
+    bool instantClaimEnabled;
 }
 
 struct WhitelistConfig {
@@ -74,6 +74,7 @@ interface IFarm {
     error InvalidConfigDepositTime(uint256 depositStartTime, uint256 depositEndTime);
     error InvalidConfigClaimTime(uint256 claimStartTime, uint256 claimEndTime);
     error InvalidConfigDepositCap(uint256 depositCap, uint256 depositCapPerUser);
+    error InstantClaimNotEnabled();
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
@@ -81,26 +82,23 @@ interface IFarm {
     event ClaimRequested(
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimableTime
     );
-    event RewardClaimed(
+    event ClaimExecuted(
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
     );
+    event ForceClaimExecuted(bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver);
+    event InstantClaimed(uint256 indexed amount, address owner, address receiver);
     event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add, uint256 timestamp);
     event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
     event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
     event WhitelistConfigUpdated(WhitelistConfig whitelistConfig);
 
-    function initialize(
-        address underlyingAsset,
-        address farmManager,
-        FarmConfig memory farmConfig
-    )
-        external;
+    function initialize(address underlyingAsset, address farmManager, FarmConfig memory farmConfig) external;
 
     function updateFarmConfig(FarmConfig memory farmConfig) external;
 
     function updateWhitelistConfig(WhitelistConfig memory _whitelistConfig) external;
 
-    function depositNativeAssetWhitelist(
+    function depositNativeAssetWithProof(
         uint256 amount,
         address depositor,
         address receiver,
@@ -109,7 +107,7 @@ interface IFarm {
         external
         payable;
 
-    function depositERC20Whitelist(
+    function depositERC20WithProof(
         uint256 amount,
         address depositor,
         address receiver,
@@ -131,16 +129,23 @@ interface IFarm {
         external
         returns (uint256, uint256, bytes32);
 
-    function claim(uint256 amount, address owner, address receiver, uint256 claimableTime, bytes32 claimId) external;
-
-    function instantClaimFromPending(
+    function executeClaim(
         uint256 amount,
         address owner,
         address receiver,
         uint256 claimableTime,
-        bytes32 claimId,
-        address claimReceiver
-    ) external;
+        bytes32 claimId
+    )
+        external;
+
+    function forceExecuteClaim(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        bytes32 claimId
+    )
+        external;
 
     function instantClaim(uint256 amount, address owner, address receiver) external returns (uint256);
 

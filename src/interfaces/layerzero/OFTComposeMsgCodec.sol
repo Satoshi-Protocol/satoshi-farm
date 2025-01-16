@@ -22,7 +22,11 @@ library OFTComposeMsgCodec {
         uint32 _srcEid,
         uint256 _amountLD,
         bytes memory _composeMsg // 0x[composeFrom][composeMsg]
-    ) internal pure returns (bytes memory _msg) {
+    )
+        internal
+        pure
+        returns (bytes memory _msg)
+    {
         _msg = abi.encodePacked(_nonce, _srcEid, _amountLD, _composeMsg);
     }
 
