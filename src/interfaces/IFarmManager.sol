@@ -19,14 +19,13 @@ struct LzConfig {
     address refundAddress;
 }
 
-struct RewardInfo {
-    IRewardToken rewardToken;
+struct DstInfo {
     uint32 dstEid;
     IFarm dstRewardFarm;
     bytes32 dstRewardManagerBytes32;
 }
 
-struct DepositWhitelistParams {
+struct DepositWithProofParams {
     IFarm farm;
     uint256 amount;
     address receiver;
@@ -67,10 +66,26 @@ struct StakePendingClaimParams {
     bytes32 claimId;
 }
 
+struct StakePendingClaimCrossChainParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+    uint256 claimableTime;
+    bytes32 claimId;
+    bytes extraOptions;
+}
+
 struct ClaimAndStakeParams {
     IFarm farm;
     uint256 amount;
     address receiver;
+}
+
+struct ClaimAndStakeCrossChainParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+    bytes extraOptions;
 }
 
 interface IFarmManager {
@@ -82,11 +97,16 @@ interface IFarmManager {
     error AssetBalanceChangedUnexpectedly(IERC20 token, IFarm farm, address from, uint256 amount, uint256 balanceDiff);
     error InvalidZeroAddress();
     error FarmBytes32Mismatch(IFarm farm, bytes32 farmBytes32);
+    error InsufficientFee(uint256 fee, uint256 msgValue);
+    error InvalidZeroValue();
+    error InvalidZeroDstEid();
+    error DstEidIsNotCurrentChain(uint32 dstEid, uint32 currentEid);
+    error DstEidIsCurrentChain(uint32 dstEid, uint32 currentEid);
 
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
     event WhitelistConfigUpdated(IFarm farm, WhitelistConfig whitelistConfig);
     event LzConfigUpdated(LzConfig lzConfig);
-    event RewardInfoUpdated(RewardInfo rewardInfo);
+    event DstInfoUpdated(DstInfo dstInfo);
     event FarmCreated(IFarm indexed farm, IERC20 indexed underlyingAsset, IFarm rewardFarm);
     event DepositWithProof(
         IFarm indexed farm, uint256 indexed amount, address sender, address receiver, bytes32[] merkleProof
@@ -121,7 +141,8 @@ interface IFarmManager {
 
     function initialize(
         IBeacon farmBeacon,
-        RewardInfo memory _rewardInfo,
+        IRewardToken rewardToken,
+        DstInfo memory _dstInfo,
         LzConfig memory _lzConfig,
         FarmConfig memory _farmConfig
     )
@@ -131,53 +152,59 @@ interface IFarmManager {
 
     function createFarm(IERC20 underlyingAsset, FarmConfig memory farmConfig) external returns (address);
 
-    function depositNativeAssetWithProof(DepositWhitelistParams memory depositParams) external payable;
+    function depositNativeAssetWithProof(DepositWithProofParams memory depositParams) external payable;
 
-    function depositNativeAssetWithProofBatch(DepositWhitelistParams[] memory depositParams) external payable;
+    function depositNativeAssetWithProofBatch(DepositWithProofParams[] memory depositParamsArr) external payable;
 
-    function depositERC20WithProof(DepositWhitelistParams memory depositParams) external;
+    function depositERC20WithProof(DepositWithProofParams memory depositParams) external;
 
-    function depositERC20WithProofBatch(DepositWhitelistParams[] memory depositParams) external;
+    function depositERC20WithProofBatch(DepositWithProofParams[] memory depositParamsArr) external;
 
     function depositNativeAsset(DepositParams memory depositParams) external payable;
 
-    function depositNativeAssetBatch(DepositParams[] memory depositParams) external payable;
+    function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) external payable;
 
     function depositERC20(DepositParams memory depositParams) external;
 
-    function depositERC20Batch(DepositParams[] memory depositParams) external;
+    function depositERC20Batch(DepositParams[] memory depositParamsArr) external;
 
     function withdraw(WithdrawParams memory withdrawParams) external;
 
-    function withdrawBatch(WithdrawParams[] memory withdrawParams) external;
+    function withdrawBatch(WithdrawParams[] memory withdrawParamsArr) external;
 
     function requestClaim(RequestClaimParams memory requestClaimParams) external;
 
-    function requestClaimBatch(RequestClaimParams[] memory requestClaimParams) external;
+    function requestClaimBatch(RequestClaimParams[] memory requestClaimParamsArr) external;
 
     function executeClaim(ExecuteClaimParams memory executeClaimParams) external;
 
-    function executeClaimBatch(ExecuteClaimParams[] memory executeClaimParams) external;
+    function executeClaimBatch(ExecuteClaimParams[] memory executeClaimParamsArr) external;
 
     function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) external;
 
-    function stakePendingClaimCrossChain(
-        StakePendingClaimParams memory stakePendingClaimParams,
-        MessagingFee calldata fee,
-        bytes memory extraOptions
+    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParamsArr) external;
+
+    function stakePendingClaimCrossChain(StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams)
+        external
+        payable;
+
+    function stakePendingClaimCrossChainBatch(
+        StakePendingClaimCrossChainParams[] memory stakePendingClaimCrossChainParamsArr
     )
         external
         payable;
 
-    function claimAndStake(
-        ClaimAndStakeParams memory claimAndStakeParams,
-        MessagingFee calldata fee,
-        bytes memory extraOptions
-    )
+    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) external;
+
+    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParamsArr) external;
+
+    function claimAndStakeCrossChain(ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams)
         external
         payable;
 
-    // function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParams) payable external;
+    function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
+        external
+        payable;
 
     function mintRewardCallback(address to, uint256 amount) external;
 
@@ -204,16 +231,12 @@ interface IFarmManager {
     function isValidFarm(IFarm farm) external view returns (bool);
 
     function lzConfig() external returns (uint32 eid, address endpoint, address refundAddress);
+
     function updateLzConfig(LzConfig memory config) external;
 
-    function rewardInfo()
-        external
-        view
-        returns (IRewardToken rewardToken, uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32);
+    function dstInfo() external view returns (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32);
 
-    function updateRewardInfo(RewardInfo memory _rewardInfo) external;
-
-    function isRewardFarmNative() external view returns (bool);
+    function updateDstInfo(DstInfo memory _dstInfo) external;
 
     function formatLzDepositRewardSendParam(
         address receiver,

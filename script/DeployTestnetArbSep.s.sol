@@ -5,7 +5,7 @@ import { Farm } from "../src/Farm.sol";
 
 import { FarmManager } from "../src/FarmManager.sol";
 import { FarmConfig, IFarm } from "../src/interfaces/IFarm.sol";
-import { DepositParams, IFarmManager, LzConfig, RewardInfo } from "../src/interfaces/IFarmManager.sol";
+import { DepositParams, DstInfo, IFarmManager, LzConfig } from "../src/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../src/interfaces/IRewardToken.sol";
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

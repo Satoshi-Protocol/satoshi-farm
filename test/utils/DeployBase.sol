@@ -5,7 +5,7 @@ import { Farm } from "../../src/Farm.sol";
 
 import { FarmManager } from "../../src/FarmManager.sol";
 import { FarmConfig, IFarm } from "../../src/interfaces/IFarm.sol";
-import { IFarmManager, LzConfig, RewardInfo } from "../../src/interfaces/IFarmManager.sol";
+import { DstInfo, IFarmManager, LzConfig } from "../../src/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
 
 import { DEPLOYER, OWNER, TestConfig } from "./TestConfig.sol";
@@ -32,7 +32,6 @@ abstract contract DeployBase is Test, TestConfig {
         _deployImplementation(DEPLOYER);
         _deployFarmBeacon(DEPLOYER, OWNER);
         _deployFarmManager(DEPLOYER);
-        _createRewardFarm(DEPLOYER, rewardToken, DEFAULT_REWARD_FARM_CONFIG);
     }
 
     function _deployMockRewardToken(address deployer) internal {
@@ -70,10 +69,11 @@ abstract contract DeployBase is Test, TestConfig {
 
         assert(address(rewardToken) != address(0));
         assert(address(farmBeacon) != address(0));
-        RewardInfo memory rewardInfo;
+        DstInfo memory dstInfo;
         LzConfig memory lzConfig;
         FarmConfig memory farmConfig;
-        bytes memory data = abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardInfo, lzConfig, farmConfig));
+        bytes memory data =
+            abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardToken, dstInfo, lzConfig, farmConfig));
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
         vm.stopPrank();
@@ -96,24 +96,5 @@ abstract contract DeployBase is Test, TestConfig {
         vm.stopPrank();
 
         return farm;
-    }
-
-    function _createRewardFarm(
-        address deployer,
-        IERC20 underlyingAsset,
-        FarmConfig memory farmConfig
-    )
-        internal
-        returns (IFarm)
-    {
-        vm.startPrank(deployer);
-
-        assert(address(underlyingAsset) != address(0));
-        // input address(0) as rewardFarm when creating rewardFarm
-        rewardFarm = IFarm(address(farmManager.createFarm(underlyingAsset, farmConfig)));
-
-        vm.stopPrank();
-
-        return rewardFarm;
     }
 }

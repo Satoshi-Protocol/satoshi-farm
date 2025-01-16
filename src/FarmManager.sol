@@ -5,15 +5,17 @@ import { Farm } from "./Farm.sol";
 
 import { DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm, WhitelistConfig } from "./interfaces/IFarm.sol";
 import {
+    ClaimAndStakeCrossChainParams,
     ClaimAndStakeParams,
     DepositParams,
-    DepositWhitelistParams,
+    DepositWithProofParams,
+    DstInfo,
     ExecuteClaimParams,
     IFarmManager,
     LZ_COMPOSE_OPT,
     LzConfig,
     RequestClaimParams,
-    RewardInfo,
+    StakePendingClaimCrossChainParams,
     StakePendingClaimParams,
     WithdrawParams
 } from "./interfaces/IFarmManager.sol";
@@ -35,10 +37,11 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     // IRewardToken public rewardToken;
     IBeacon public farmBeacon;
+    IRewardToken public rewardToken;
     mapping(IFarm => bool) public validFarms;
 
     LzConfig public lzConfig;
-    RewardInfo public rewardInfo;
+    DstInfo public dstInfo;
 
     modifier onlyFarm(address addr) {
         IFarm farm = IFarm(addr);
@@ -46,11 +49,22 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         _;
     }
 
+    modifier onlyDstEidIsCurrentChain() {
+        if (!_dstEidIsCurrentChain()) revert DstEidIsNotCurrentChain(dstInfo.dstEid, lzConfig.eid);
+        _;
+    }
+
+    modifier onlyDstEidIsNotCurrentChain() {
+        if (_dstEidIsCurrentChain()) revert DstEidIsCurrentChain(dstInfo.dstEid, lzConfig.eid);
+        _;
+    }
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 
     function initialize(
         IBeacon _farmBeacon,
-        RewardInfo memory _rewardInfo,
+        IRewardToken _rewardToken,
+        DstInfo memory _dstInfo,
         LzConfig memory _lzConfig,
         FarmConfig memory _farmConfig
     )
@@ -58,27 +72,29 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         initializer
     {
         _checkIsNotZeroAddress(address(_farmBeacon));
-        _checkIsNotZeroAddress(address(_rewardInfo.rewardToken));
+        _checkIsNotZeroAddress(address(_rewardToken));
 
         __Ownable_init(msg.sender);
         __Pausable_init();
         __UUPSUpgradeable_init();
 
-        // if dstEid is 0, create farm for rewardToken initially
-        if (_rewardInfo.dstEid == lzConfig.eid) {
-            IFarm farm = _createFarm(IERC20(_rewardInfo.rewardToken), _farmConfig);
-            _rewardInfo.dstRewardFarm = farm;
-        } else if (_rewardInfo.dstEid != 0) {
-            _checkIsNotZeroAddress(address(_rewardInfo.dstRewardFarm));
+        // if dstEid is current chain, create reward farm
+        if (_dstInfo.dstEid == lzConfig.eid) {
+            IFarm farm = _createFarm(IERC20(_rewardToken), _farmConfig);
+            _dstInfo.dstRewardFarm = farm;
+        } else if (_dstInfo.dstEid != 0) {
+            _checkIsNotZeroAddress(address(_dstInfo.dstRewardFarm));
+            _checkIsNotZero(uint256(_dstInfo.dstRewardManagerBytes32));
         } else {
-            revert("Invalid dstEid");
+            revert InvalidZeroDstEid();
         }
 
         farmBeacon = _farmBeacon;
-        rewardInfo = _rewardInfo;
+        rewardToken = _rewardToken;
+        dstInfo = _dstInfo;
         lzConfig = _lzConfig;
 
-        emit RewardInfoUpdated(_rewardInfo);
+        emit DstInfoUpdated(_dstInfo);
         emit LzConfigUpdated(_lzConfig);
     }
 
@@ -96,9 +112,13 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit LzConfigUpdated(_lzConfig);
     }
 
-    function updateRewardInfo(RewardInfo memory _rewardInfo) external onlyOwner {
-        rewardInfo = _rewardInfo;
-        emit RewardInfoUpdated(_rewardInfo);
+    function updateDstInfo(DstInfo memory _dstInfo) external onlyOwner {
+        _checkIsNotZero(uint256(_dstInfo.dstEid));
+        _checkIsNotZero(uint256(_dstInfo.dstRewardManagerBytes32));
+        _checkIsNotZeroAddress(address(_dstInfo.dstRewardFarm));
+
+        dstInfo = _dstInfo;
+        emit DstInfoUpdated(_dstInfo);
     }
 
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external onlyOwner {
@@ -116,9 +136,17 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return address(farm);
     }
 
-    function depositNativeAssetWithProof(DepositWhitelistParams memory depositParams) public payable whenNotPaused {
-        (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) =
-            (depositParams.farm, depositParams.amount, depositParams.receiver, depositParams.merkleProof);
+    function depositNativeAssetWithProof(DepositWithProofParams memory depositWithProofParams)
+        public
+        payable
+        whenNotPaused
+    {
+        (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) = (
+            depositWithProofParams.farm,
+            depositWithProofParams.amount,
+            depositWithProofParams.receiver,
+            depositWithProofParams.merkleProof
+        );
 
         _checkFarmIsValid(farm);
 
@@ -129,25 +157,29 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit DepositWithProof(farm, amount, msg.sender, receiver, merkleProof);
     }
 
-    function depositNativeAssetWithProofBatch(DepositWhitelistParams[] memory depositParams)
+    function depositNativeAssetWithProofBatch(DepositWithProofParams[] memory depositWithProofParamsArr)
         public
         payable
         whenNotPaused
     {
-        uint256[] memory depositAmountArr = new uint256[](depositParams.length);
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            depositAmountArr[i] = depositParams[i].amount;
+        uint256[] memory depositAmountArr = new uint256[](depositWithProofParamsArr.length);
+        for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
+            depositAmountArr[i] = depositWithProofParamsArr[i].amount;
         }
         _checkTotalAmount(depositAmountArr, msg.value);
 
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            depositNativeAssetWithProof(depositParams[i]);
+        for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
+            depositNativeAssetWithProof(depositWithProofParamsArr[i]);
         }
     }
 
-    function depositERC20WithProof(DepositWhitelistParams memory depositParams) public whenNotPaused {
-        (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) =
-            (depositParams.farm, depositParams.amount, depositParams.receiver, depositParams.merkleProof);
+    function depositERC20WithProof(DepositWithProofParams memory depositWithProofParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) = (
+            depositWithProofParams.farm,
+            depositWithProofParams.amount,
+            depositWithProofParams.receiver,
+            depositWithProofParams.merkleProof
+        );
 
         _checkFarmIsValid(farm);
 
@@ -156,9 +188,12 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit DepositWithProof(farm, amount, msg.sender, receiver, merkleProof);
     }
 
-    function depositERC20WithProofBatch(DepositWhitelistParams[] memory depositParams) public whenNotPaused {
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            depositERC20WithProof(depositParams[i]);
+    function depositERC20WithProofBatch(DepositWithProofParams[] memory depositWithProofParamsArr)
+        public
+        whenNotPaused
+    {
+        for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
+            depositERC20WithProof(depositWithProofParamsArr[i]);
         }
     }
 
@@ -175,16 +210,16 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit Deposit(farm, amount, msg.sender, receiver);
     }
 
-    function depositNativeAssetBatch(DepositParams[] memory depositParams) public payable whenNotPaused {
-        uint256[] memory depositAmountArr = new uint256[](depositParams.length);
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            depositAmountArr[i] = depositParams[i].amount;
+    function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) public payable whenNotPaused {
+        uint256[] memory depositAmountArr = new uint256[](depositParamsArr.length);
+        for (uint256 i = 0; i < depositParamsArr.length; i++) {
+            depositAmountArr[i] = depositParamsArr[i].amount;
         }
 
         _checkTotalAmount(depositAmountArr, msg.value);
 
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            depositNativeAsset(depositParams[i]);
+        for (uint256 i = 0; i < depositParamsArr.length; i++) {
+            depositNativeAsset(depositParamsArr[i]);
         }
     }
 
@@ -199,9 +234,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit Deposit(farm, amount, msg.sender, receiver);
     }
 
-    function depositERC20Batch(DepositParams[] memory depositParams) public whenNotPaused {
-        for (uint256 i = 0; i < depositParams.length; i++) {
-            depositERC20(depositParams[i]);
+    function depositERC20Batch(DepositParams[] memory depositParamsArr) public whenNotPaused {
+        for (uint256 i = 0; i < depositParamsArr.length; i++) {
+            depositERC20(depositParamsArr[i]);
         }
     }
 
@@ -215,9 +250,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit Withdraw(farm, amount, msg.sender, receiver);
     }
 
-    function withdrawBatch(WithdrawParams[] memory withdrawParams) public whenNotPaused {
-        for (uint256 i = 0; i < withdrawParams.length; i++) {
-            withdraw(withdrawParams[i]);
+    function withdrawBatch(WithdrawParams[] memory withdrawParamsArr) public whenNotPaused {
+        for (uint256 i = 0; i < withdrawParamsArr.length; i++) {
+            withdraw(withdrawParamsArr[i]);
         }
     }
 
@@ -231,9 +266,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit ClaimRequested(farm, claimAmt, msg.sender, receiver, claimableTime, claimId);
     }
 
-    function requestClaimBatch(RequestClaimParams[] memory requestClaimParams) public whenNotPaused {
-        for (uint256 i = 0; i < requestClaimParams.length; i++) {
-            requestClaim(requestClaimParams[i]);
+    function requestClaimBatch(RequestClaimParams[] memory requestClaimParamsArr) public whenNotPaused {
+        for (uint256 i = 0; i < requestClaimParamsArr.length; i++) {
+            requestClaim(requestClaimParamsArr[i]);
         }
     }
 
@@ -252,18 +287,17 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit ClaimExecuted(farm, amount, owner, msg.sender, claimableTime, claimId);
     }
 
-    function executeClaimBatch(ExecuteClaimParams[] memory executeClaimParams) public whenNotPaused {
-        for (uint256 i = 0; i < executeClaimParams.length; i++) {
-            executeClaim(executeClaimParams[i]);
+    function executeClaimBatch(ExecuteClaimParams[] memory executeClaimParamsArr) public whenNotPaused {
+        for (uint256 i = 0; i < executeClaimParamsArr.length; i++) {
+            executeClaim(executeClaimParamsArr[i]);
         }
     }
 
-    function _isStakeConfigValid() internal view returns (bool) {
-        return rewardInfo.dstRewardFarm != IFarm(address(0)) && rewardInfo.rewardToken != IRewardToken(address(0));
-    }
-
-    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) public whenNotPaused {
-        require(_isStakeConfigValid(), "Invalid stake config");
+    function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams)
+        public
+        whenNotPaused
+        onlyDstEidIsCurrentChain
+    {
         (IFarm farm, uint256 amount, address receiver, uint256 claimableTime, bytes32 claimId) = (
             stakePendingClaimParams.farm,
             stakePendingClaimParams.amount,
@@ -272,60 +306,90 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             stakePendingClaimParams.claimId
         );
         _checkFarmIsValid(farm);
-        //TODO: check reward farm chain is native
 
         farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, claimId);
 
         DepositParams memory depositParams =
-            DepositParams({ farm: rewardInfo.dstRewardFarm, amount: amount, receiver: receiver });
+            DepositParams({ farm: dstInfo.dstRewardFarm, amount: amount, receiver: receiver });
 
-        rewardInfo.rewardToken.approve(address(rewardInfo.dstRewardFarm), amount);
-        depositERC20(depositParams);
+        _stake(depositParams);
 
         emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
     }
 
-    function stakePendingClaimCrossChain(
-        StakePendingClaimParams memory stakePendingClaimParams,
-        MessagingFee calldata fee,
-        bytes memory extraOptions
-    )
+    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParamsArr)
+        public
+        whenNotPaused
+        onlyDstEidIsCurrentChain
+    {
+        for (uint256 i = 0; i < stakePendingClaimParamsArr.length; i++) {
+            stakePendingClaim(stakePendingClaimParamsArr[i]);
+        }
+    }
+
+    function stakePendingClaimCrossChain(StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams)
         public
         payable
         whenNotPaused
+        onlyDstEidIsNotCurrentChain
     {
-        (IFarm farm, uint256 amount, address receiver, uint256 claimableTime, bytes32 claimId) = (
-            stakePendingClaimParams.farm,
-            stakePendingClaimParams.amount,
-            stakePendingClaimParams.receiver,
-            stakePendingClaimParams.claimableTime,
-            stakePendingClaimParams.claimId
+        (
+            IFarm farm,
+            uint256 amount,
+            address receiver,
+            uint256 claimableTime,
+            bytes32 claimId,
+            bytes memory extraOptions
+        ) = (
+            stakePendingClaimCrossChainParams.farm,
+            stakePendingClaimCrossChainParams.amount,
+            stakePendingClaimCrossChainParams.receiver,
+            stakePendingClaimCrossChainParams.claimableTime,
+            stakePendingClaimCrossChainParams.claimId,
+            stakePendingClaimCrossChainParams.extraOptions
         );
         _checkFarmIsValid(farm);
-        //TODO: check reward farm chain is not native
 
         farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, claimId);
 
-        SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
-        MessagingFee memory expectFee = rewardInfo.rewardToken.quoteSend(sendParam, false);
-        require(expectFee.nativeFee == msg.value, "Invalid fee");
-
-        rewardInfo.rewardToken.send{ value: msg.value }(sendParam, fee, lzConfig.refundAddress);
+        _stakeCrossChain(receiver, amount, extraOptions, msg.value);
 
         emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
     }
 
-    function claimAndStake(
-        ClaimAndStakeParams memory claimAndStakeParams,
-        MessagingFee calldata fee,
-        bytes memory extraOptions
+    function stakePendingClaimCrossChainBatch(
+        StakePendingClaimCrossChainParams[] memory stakePendingClaimCrossChainParamsArr
     )
         public
         payable
         whenNotPaused
+        onlyDstEidIsNotCurrentChain
     {
-        require(_isStakeConfigValid(), "Invalid stake config");
-        // TODO: check claimAndStake enabled?
+        uint256[] memory feeAmountArr = new uint256[](stakePendingClaimCrossChainParamsArr.length);
+        for (uint256 i = 0; i < stakePendingClaimCrossChainParamsArr.length; i++) {
+            StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams =
+                stakePendingClaimCrossChainParamsArr[i];
+            SendParam memory sendParam = formatLzDepositRewardSendParam(
+                stakePendingClaimCrossChainParams.receiver,
+                stakePendingClaimCrossChainParams.amount,
+                stakePendingClaimCrossChainParams.extraOptions
+            );
+            MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
+            feeAmountArr[i] = expectFee.nativeFee;
+        }
+
+        _checkTotalAmount(feeAmountArr, msg.value);
+
+        for (uint256 i = 0; i < stakePendingClaimCrossChainParamsArr.length; i++) {
+            stakePendingClaimCrossChain(stakePendingClaimCrossChainParamsArr[i]);
+        }
+    }
+
+    function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams)
+        public
+        whenNotPaused
+        onlyDstEidIsCurrentChain
+    {
         (IFarm farm, uint256 amount, address receiver) =
             (claimAndStakeParams.farm, claimAndStakeParams.amount, claimAndStakeParams.receiver);
 
@@ -333,39 +397,73 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         uint256 claimAndStakeAmt = farm.instantClaim(amount, msg.sender, address(this));
 
-        _stake(claimAndStakeAmt, receiver, fee, extraOptions);
+        DepositParams memory depositParams =
+            DepositParams({ farm: dstInfo.dstRewardFarm, amount: amount, receiver: receiver });
+
+        _stake(depositParams);
 
         emit ClaimAndStake(farm, claimAndStakeAmt, msg.sender, receiver);
+    }
+
+    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParamsArr) public whenNotPaused {
+        for (uint256 i = 0; i < claimAndStakeParamsArr.length; i++) {
+            claimAndStake(claimAndStakeParamsArr[i]);
+        }
+    }
+
+    function claimAndStakeCrossChain(ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams)
+        public
+        payable
+        whenNotPaused
+        onlyDstEidIsNotCurrentChain
+    {
+        (IFarm farm, uint256 amount, address receiver, bytes memory extraOptions) = (
+            claimAndStakeCrossChainParams.farm,
+            claimAndStakeCrossChainParams.amount,
+            claimAndStakeCrossChainParams.receiver,
+            claimAndStakeCrossChainParams.extraOptions
+        );
+
+        _checkFarmIsValid(farm);
+
+        uint256 claimAndStakeAmt = farm.instantClaim(amount, msg.sender, address(this));
+
+        _stakeCrossChain(receiver, amount, extraOptions, msg.value);
+
+        emit ClaimAndStake(farm, claimAndStakeAmt, msg.sender, receiver);
+    }
+
+    function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
+        public
+        payable
+        whenNotPaused
+        onlyDstEidIsNotCurrentChain
+    {
+        uint256[] memory feeAmountArr = new uint256[](claimAndStakeCrossChainParamsArr.length);
+        for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
+            ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams = claimAndStakeCrossChainParamsArr[i];
+            SendParam memory sendParam = formatLzDepositRewardSendParam(
+                claimAndStakeCrossChainParams.receiver,
+                claimAndStakeCrossChainParams.amount,
+                claimAndStakeCrossChainParams.extraOptions
+            );
+            MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
+            feeAmountArr[i] = expectFee.nativeFee;
+        }
+
+        _checkTotalAmount(feeAmountArr, msg.value);
+
+        for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
+            claimAndStakeCrossChain(claimAndStakeCrossChainParamsArr[i]);
+        }
     }
 
     function mintRewardCallback(address to, uint256 amount) external onlyFarm(msg.sender) {
         IFarm farm = IFarm(msg.sender);
 
-        try rewardInfo.rewardToken.mint(to, amount) { }
+        try rewardToken.mint(to, amount) { }
         catch {
-            revert MintRewardTokenFailed(rewardInfo.rewardToken, farm, amount);
-        }
-    }
-
-    function _stake(
-        address receiver,
-        uint256 amount,
-        MessagingFee calldata fee,
-        bytes memory extraOptions
-    )
-        internal
-        onlyFarm(msg.sender)
-    {
-        if (isRewardFarmNative()) {
-            DepositParams memory depositParams =
-                DepositParams({ farm: rewardInfo.dstRewardFarm, amount: amount, receiver: receiver });
-            rewardInfo.rewardToken.approve(address(rewardInfo.dstRewardFarm), amount);
-            depositERC20(depositParams);
-        } else {
-            SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
-            MessagingFee memory expectFee = rewardInfo.rewardToken.quoteSend(sendParam, false);
-            require(expectFee.nativeFee == msg.value, "Invalid fee");
-            rewardInfo.rewardToken.send{ value: msg.value }(sendParam, fee, lzConfig.refundAddress);
+            revert MintRewardTokenFailed(rewardToken, farm, amount);
         }
     }
 
@@ -420,58 +518,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return validFarms[farm];
     }
 
-    // --- internal functions ---
-    function _checkFarmIsValid(IFarm farm) internal view {
-        if (!isValidFarm(farm)) revert InvalidFarm(farm);
-    }
-
-    function _checkTotalAmount(uint256[] memory amountArr, uint256 msgValue) internal pure {
-        uint256 totalAmount;
-        for (uint256 i = 0; i < amountArr.length; i++) {
-            totalAmount += amountArr[i];
-        }
-
-        if (msgValue != totalAmount) revert InvalidAmount(msgValue, totalAmount);
-    }
-
-    function _checkIsNotZeroAddress(address addr) internal pure {
-        if (addr == address(0)) revert InvalidZeroAddress();
-    }
-
-    function _stake(uint256 amount, address receiver, MessagingFee calldata fee, bytes memory extraOptions) internal {
-        if (isRewardFarmNative()) {
-            DepositParams memory depositParams =
-                DepositParams({ farm: rewardInfo.dstRewardFarm, amount: amount, receiver: receiver });
-
-            rewardInfo.rewardToken.approve(address(rewardInfo.dstRewardFarm), amount);
-            depositERC20(depositParams);
-        } else {
-            SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
-            MessagingFee memory expectFee = rewardInfo.rewardToken.quoteSend(sendParam, false);
-            require(expectFee.nativeFee == msg.value, "Invalid fee");
-
-            rewardInfo.rewardToken.send{ value: msg.value }(sendParam, fee, lzConfig.refundAddress);
-        }
-    }
-
-    function _createFarm(IERC20 underlyingAsset, FarmConfig memory farmConfig) internal returns (IFarm) {
-        bytes memory initData = abi.encodeCall(IFarm.initialize, (address(underlyingAsset), address(this), farmConfig));
-        IFarm farm = IFarm(address(new BeaconProxy(address(farmBeacon), initData)));
-        if (isValidFarm(farm)) revert FarmAlreadyExists(farm);
-
-        validFarms[farm] = true;
-        emit FarmCreated(farm, underlyingAsset, rewardInfo.dstRewardFarm);
-        return farm;
-    }
-
-    function _calcFarmBytes32(IFarm farm) internal pure returns (bytes32) {
-        return bytes32(bytes20(uint160(address(farm))));
-    }
-
-    function _checkFarmBytes32IsValid(IFarm farm, bytes32 farmBytes32) internal pure {
-        if (_calcFarmBytes32(farm) != farmBytes32) revert FarmBytes32Mismatch(farm, farmBytes32);
-    }
-
     /// @notice Handles incoming composed messages from LayerZero.
     /// @dev Decodes the message payload to perform a token swap.
     ///      This method expects the encoded compose message to contain the swap amount and recipient address.
@@ -491,7 +537,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         payable
         override
     {
-        require(_oApp == address(rewardInfo.rewardToken), "!oApp");
+        require(_oApp == address(rewardToken), "!oApp");
         require(msg.sender == lzConfig.endpoint, "!endpoint");
         // Extract the composed message from the delivered message using the MsgCodec
         (LZ_COMPOSE_OPT opt, bytes memory data) =
@@ -500,15 +546,11 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
             (DepositParams memory depositParams) = abi.decode(data, (DepositParams));
             require(_amountLD == depositParams.amount, "invalid receive amount");
-            rewardInfo.rewardToken.approve(address(depositParams.farm), depositParams.amount);
+            rewardToken.approve(address(depositParams.farm), depositParams.amount);
             depositERC20(depositParams);
         } else {
             revert("Invalid opt");
         }
-    }
-
-    function isRewardFarmNative() public view returns (bool) {
-        return lzConfig.eid == rewardInfo.dstEid;
     }
 
     function formatLzDepositRewardSendParam(
@@ -521,17 +563,66 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         returns (SendParam memory sendParam)
     {
         bytes memory composeMsg = abi.encode(
-            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(DepositParams(rewardInfo.dstRewardFarm, amount, receiver))
+            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(DepositParams(dstInfo.dstRewardFarm, amount, receiver))
         );
 
         sendParam = SendParam(
-            rewardInfo.dstEid,
-            rewardInfo.dstRewardManagerBytes32,
+            dstInfo.dstEid,
+            dstInfo.dstRewardManagerBytes32,
             amount,
             amount,
             extraOptions,
             composeMsg,
             "" // oftCmd
         );
+    }
+
+    // --- internal functions ---
+    function _createFarm(IERC20 underlyingAsset, FarmConfig memory farmConfig) internal returns (IFarm) {
+        bytes memory initData = abi.encodeCall(IFarm.initialize, (address(underlyingAsset), address(this), farmConfig));
+        IFarm farm = IFarm(address(new BeaconProxy(address(farmBeacon), initData)));
+        if (isValidFarm(farm)) revert FarmAlreadyExists(farm);
+
+        validFarms[farm] = true;
+        emit FarmCreated(farm, underlyingAsset, dstInfo.dstRewardFarm);
+        return farm;
+    }
+
+    function _stake(DepositParams memory depositParams) internal {
+        rewardToken.approve(address(dstInfo.dstRewardFarm), depositParams.amount);
+        depositERC20(depositParams);
+    }
+
+    function _stakeCrossChain(address receiver, uint256 amount, bytes memory extraOptions, uint256 msgValue) internal {
+        SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
+        MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
+        if (msgValue < expectFee.nativeFee) revert InsufficientFee(expectFee.nativeFee, msgValue);
+
+        rewardToken.send{ value: msgValue }(sendParam, expectFee, lzConfig.refundAddress);
+    }
+
+    function _checkFarmIsValid(IFarm farm) internal view {
+        if (!isValidFarm(farm)) revert InvalidFarm(farm);
+    }
+
+    function _checkTotalAmount(uint256[] memory amountArr, uint256 msgValue) internal pure {
+        uint256 totalAmount;
+        for (uint256 i = 0; i < amountArr.length; i++) {
+            totalAmount += amountArr[i];
+        }
+
+        if (msgValue != totalAmount) revert InvalidAmount(msgValue, totalAmount);
+    }
+
+    function _checkIsNotZero(uint256 value) internal pure {
+        if (value == 0) revert InvalidZeroValue();
+    }
+
+    function _checkIsNotZeroAddress(address addr) internal pure {
+        if (addr == address(0)) revert InvalidZeroAddress();
+    }
+
+    function _dstEidIsCurrentChain() internal view returns (bool) {
+        return lzConfig.eid == dstInfo.dstEid;
     }
 }

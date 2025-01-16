@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import { FarmConfig, IFarm } from "../../src/interfaces/IFarm.sol";
 
-import { IFarmManager, LzConfig, RewardInfo } from "../../src/interfaces/IFarmManager.sol";
+import { DstInfo, IFarmManager, LzConfig } from "../../src/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
 
 abstract contract ArbSepTestnetConfig {
@@ -11,10 +11,9 @@ abstract contract ArbSepTestnetConfig {
     address constant FARM_MANAGER_ADDRESS = address(0);
 
     /**
-     * RewardInfo
+     * DstInfo
      */
-    RewardInfo REWARD_INFO = RewardInfo({
-        rewardToken: IRewardToken(address(0x1e1d7C76Bd273d60E756322A8Ea9A1914327fa13)),
+    DstInfo DST_INFO = DstInfo({
         dstEid: 40_245, // BASE Sepolia chain
         dstRewardFarm: IFarm(address(0)),
         dstRewardManagerBytes32: bytes32(0)
@@ -49,10 +48,9 @@ abstract contract BaseSepTestnetConfig {
     address constant FARM_MANAGER_ADDRESS = address(0);
 
     /**
-     * RewardInfo
+     * DstInfo
      */
-    RewardInfo REWARD_INFO = RewardInfo({
-        rewardToken: IRewardToken(address(0x819591a4e747212EDA0880DD2F171B582Ce4149B)),
+    DstInfo DST_INFO = DstInfo({
         dstEid: 40_245, // BASE Sepolia chain
         dstRewardFarm: IFarm(address(0)),
         dstRewardManagerBytes32: bytes32(0)
