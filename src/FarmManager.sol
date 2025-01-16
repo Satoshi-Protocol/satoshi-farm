@@ -65,13 +65,13 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         __UUPSUpgradeable_init();
 
         // if dstEid is 0, create farm for rewardToken initially
-        if (_rewardInfo.dstEid == 0) {
+        if (_rewardInfo.dstEid == lzConfig.eid) {
             IFarm farm = _createFarm(IERC20(_rewardInfo.rewardToken), _farmConfig);
-            _rewardInfo.rewardFarm = farm;
-            _rewardInfo.rewardFarmBytes32 = _calcFarmBytes32(farm);
+            _rewardInfo.dstRewardFarm = farm;
+        } else if (_rewardInfo.dstEid != 0) {
+            _checkIsNotZeroAddress(address(_rewardInfo.dstRewardFarm));
         } else {
-            _checkIsNotZeroAddress(address(_rewardInfo.rewardFarm));
-            _checkFarmBytes32IsValid(_rewardInfo.rewardFarm, _rewardInfo.rewardFarmBytes32);
+            revert("Invalid dstEid");
         }
 
         farmBeacon = _farmBeacon;
@@ -258,7 +258,12 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         }
     }
 
+    function _isStakeConfigValid() internal view returns (bool) {
+        return rewardInfo.dstRewardFarm != IFarm(address(0)) && rewardInfo.rewardToken != IRewardToken(address(0));
+    }
+
     function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) public whenNotPaused {
+        require(_isStakeConfigValid(), "Invalid stake config");
         (IFarm farm, uint256 amount, address receiver, uint256 claimableTime, bytes32 claimId) = (
             stakePendingClaimParams.farm,
             stakePendingClaimParams.amount,
@@ -272,9 +277,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, claimId);
 
         DepositParams memory depositParams =
-            DepositParams({ farm: rewardInfo.rewardFarm, amount: amount, receiver: receiver });
+            DepositParams({ farm: rewardInfo.dstRewardFarm, amount: amount, receiver: receiver });
 
-        rewardInfo.rewardToken.approve(address(rewardInfo.rewardFarm), amount);
+        rewardInfo.rewardToken.approve(address(rewardInfo.dstRewardFarm), amount);
         depositERC20(depositParams);
 
         emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
@@ -319,6 +324,8 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         payable
         whenNotPaused
     {
+        require(_isStakeConfigValid(), "Invalid stake config");
+        // TODO: check claimAndStake enabled?
         (IFarm farm, uint256 amount, address receiver) =
             (claimAndStakeParams.farm, claimAndStakeParams.amount, claimAndStakeParams.receiver);
 
@@ -337,6 +344,28 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         try rewardInfo.rewardToken.mint(to, amount) { }
         catch {
             revert MintRewardTokenFailed(rewardInfo.rewardToken, farm, amount);
+        }
+    }
+
+    function _stake(
+        address receiver,
+        uint256 amount,
+        MessagingFee calldata fee,
+        bytes memory extraOptions
+    )
+        internal
+        onlyFarm(msg.sender)
+    {
+        if (isRewardFarmNative()) {
+            DepositParams memory depositParams =
+                DepositParams({ farm: rewardInfo.dstRewardFarm, amount: amount, receiver: receiver });
+            rewardInfo.rewardToken.approve(address(rewardInfo.dstRewardFarm), amount);
+            depositERC20(depositParams);
+        } else {
+            SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
+            MessagingFee memory expectFee = rewardInfo.rewardToken.quoteSend(sendParam, false);
+            require(expectFee.nativeFee == msg.value, "Invalid fee");
+            rewardInfo.rewardToken.send{ value: msg.value }(sendParam, fee, lzConfig.refundAddress);
         }
     }
 
@@ -412,9 +441,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     function _stake(uint256 amount, address receiver, MessagingFee calldata fee, bytes memory extraOptions) internal {
         if (isRewardFarmNative()) {
             DepositParams memory depositParams =
-                DepositParams({ farm: rewardInfo.rewardFarm, amount: amount, receiver: receiver });
+                DepositParams({ farm: rewardInfo.dstRewardFarm, amount: amount, receiver: receiver });
 
-            rewardInfo.rewardToken.approve(address(rewardInfo.rewardFarm), amount);
+            rewardInfo.rewardToken.approve(address(rewardInfo.dstRewardFarm), amount);
             depositERC20(depositParams);
         } else {
             SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
@@ -431,7 +460,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         if (isValidFarm(farm)) revert FarmAlreadyExists(farm);
 
         validFarms[farm] = true;
-        emit FarmCreated(farm, underlyingAsset, rewardInfo.rewardFarm);
+        emit FarmCreated(farm, underlyingAsset, rewardInfo.dstRewardFarm);
         return farm;
     }
 
@@ -492,12 +521,12 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         returns (SendParam memory sendParam)
     {
         bytes memory composeMsg = abi.encode(
-            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(DepositParams(rewardInfo.rewardFarm, amount, receiver))
+            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(DepositParams(rewardInfo.dstRewardFarm, amount, receiver))
         );
 
         sendParam = SendParam(
             rewardInfo.dstEid,
-            rewardInfo.rewardFarmBytes32,
+            rewardInfo.dstRewardManagerBytes32,
             amount,
             amount,
             extraOptions,

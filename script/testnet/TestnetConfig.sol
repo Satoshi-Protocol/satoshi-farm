@@ -1,0 +1,83 @@
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.8.0 <0.9.0;
+
+import { FarmConfig, IFarm } from "../../src/interfaces/IFarm.sol";
+
+import { IFarmManager, LzConfig, RewardInfo } from "../../src/interfaces/IFarmManager.sol";
+import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
+
+abstract contract ArbSepTestnetConfig {
+    bool constant IS_DEPLOY_MEME_FARM = true;
+    address constant FARM_MANAGER_ADDRESS = address(0);
+
+    /**
+     * RewardInfo
+     */
+    RewardInfo REWARD_INFO = RewardInfo({
+        rewardToken: IRewardToken(address(0x1e1d7C76Bd273d60E756322A8Ea9A1914327fa13)),
+        dstEid: 40_245, // BASE Sepolia chain
+        dstRewardFarm: IFarm(address(0)),
+        dstRewardManagerBytes32: bytes32(0)
+    });
+
+    /**
+     * LzConfig
+     */
+    LzConfig LZ_CONFIG = LzConfig({
+        eid: 40_231, // Arbitrum Sepolia chain
+        endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
+        refundAddress: 0xD26C9387F92EEa2cD030440A0799E403B225B8dD
+    });
+
+    //   FarmConfig REWARD_FARM_CONFIG = FarmConfig({
+    //       depositCap: 10000000e18,
+    //       depositCapPerUser: 10000000e18,
+    //       depositStartTime: 0,
+    //       depositEndTime: type(uint256).max,
+    //       rewardRate: 10000e18,
+    //       rewardStartTime: 0,
+    //       rewardEndTime: type(uint256).max,
+    //       claimStartTime: type(uint256).max,
+    //       claimEndTime: type(uint256).max,
+    //       claimDelayTime: 0,
+    //       claimAndStakeEnabled: false
+    //   });
+}
+
+abstract contract BaseSepTestnetConfig {
+    bool constant IS_DEPLOY_MEME_FARM = true;
+    address constant FARM_MANAGER_ADDRESS = address(0);
+
+    /**
+     * RewardInfo
+     */
+    RewardInfo REWARD_INFO = RewardInfo({
+        rewardToken: IRewardToken(address(0x819591a4e747212EDA0880DD2F171B582Ce4149B)),
+        dstEid: 40_245, // BASE Sepolia chain
+        dstRewardFarm: IFarm(address(0)),
+        dstRewardManagerBytes32: bytes32(0)
+    });
+
+    /**
+     * LzConfig
+     */
+    LzConfig LZ_CONFIG = LzConfig({
+        eid: 40_245, // BASE Sepolia chain
+        endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
+        refundAddress: 0xD26C9387F92EEa2cD030440A0799E403B225B8dD
+    });
+
+    //   FarmConfig REWARD_FARM_CONFIG = FarmConfig({
+    //       depositCap: 10000000e18,
+    //       depositCapPerUser: 10000000e18,
+    //       depositStartTime: 0,
+    //       depositEndTime: type(uint256).max,
+    //       rewardRate: 10000e18,
+    //       rewardStartTime: 0,
+    //       rewardEndTime: type(uint256).max,
+    //       claimStartTime: type(uint256).max,
+    //       claimEndTime: type(uint256).max,
+    //       claimDelayTime: 0,
+    //       claimAndStakeEnabled: false
+    //   });
+}

@@ -20,10 +20,10 @@ struct LzConfig {
 }
 
 struct RewardInfo {
-    uint32 dstEid; // Destination layerzero endpoint ID, if 0, then rewardToken is in native chain.
-    IFarm rewardFarm;
-    bytes32 rewardFarmBytes32; // Reward farm address in bytes32 format
     IRewardToken rewardToken;
+    uint32 dstEid;
+    IFarm dstRewardFarm;
+    bytes32 dstRewardManagerBytes32;
 }
 
 struct DepositWhitelistParams {
@@ -209,7 +209,7 @@ interface IFarmManager {
     function rewardInfo()
         external
         view
-        returns (uint32 dstEid, IFarm rewardFarm, bytes32 rewardFarmBytes32, IRewardToken rewardToken);
+        returns (IRewardToken rewardToken, uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32);
 
     function updateRewardInfo(RewardInfo memory _rewardInfo) external;
 
