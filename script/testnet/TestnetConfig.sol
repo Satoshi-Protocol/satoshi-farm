@@ -8,13 +8,13 @@ import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
 
 abstract contract ArbSepTestnetConfig {
     bool constant IS_DEPLOY_MEME_FARM = true;
-    address constant FARM_MANAGER_ADDRESS = address(0);
+    address constant REWARD_TOKEN_ADDRESS = address(0x1e1d7C76Bd273d60E756322A8Ea9A1914327fa13);
 
     /**
      * DstInfo
      */
     DstInfo DST_INFO = DstInfo({
-        dstEid: 40_245, // BASE Sepolia chain
+        dstEid: 40_231, // Arbitrum Sepolia chain
         dstRewardFarm: IFarm(address(0)),
         dstRewardManagerBytes32: bytes32(0)
     });
@@ -28,32 +28,32 @@ abstract contract ArbSepTestnetConfig {
         refundAddress: 0xD26C9387F92EEa2cD030440A0799E403B225B8dD
     });
 
-    //   FarmConfig REWARD_FARM_CONFIG = FarmConfig({
-    //       depositCap: 10000000e18,
-    //       depositCapPerUser: 10000000e18,
-    //       depositStartTime: 0,
-    //       depositEndTime: type(uint256).max,
-    //       rewardRate: 10000e18,
-    //       rewardStartTime: 0,
-    //       rewardEndTime: type(uint256).max,
-    //       claimStartTime: type(uint256).max,
-    //       claimEndTime: type(uint256).max,
-    //       claimDelayTime: 0,
-    //       claimAndStakeEnabled: false
-    //   });
+    FarmConfig REWARD_FARM_CONFIG = FarmConfig({
+        depositCap: 10000000e18,
+        depositCapPerUser: 10000000e18,
+        depositStartTime: 0,
+        depositEndTime: type(uint256).max,
+        rewardRate: 10000e18,
+        rewardStartTime: 0,
+        rewardEndTime: type(uint256).max,
+        claimStartTime: type(uint256).max,
+        claimEndTime: type(uint256).max,
+        claimDelayTime: 0,
+        instantClaimEnabled: true
+    });
 }
 
 abstract contract BaseSepTestnetConfig {
     bool constant IS_DEPLOY_MEME_FARM = true;
-    address constant FARM_MANAGER_ADDRESS = address(0);
+    address constant REWARD_TOKEN_ADDRESS = address(0x1e1d7C76Bd273d60E756322A8Ea9A1914327fa13);
 
     /**
      * DstInfo
      */
     DstInfo DST_INFO = DstInfo({
-        dstEid: 40_245, // BASE Sepolia chain
-        dstRewardFarm: IFarm(address(0)),
-        dstRewardManagerBytes32: bytes32(0)
+        dstEid: 40_231, // Arbitrum Sepolia chain
+        dstRewardFarm: IFarm(address(0x6cD730086F1207BaeC44DE221beD156d82872575)),
+        dstRewardManagerBytes32: bytes32(0x0000000000000000000000007adc26353ed163fce40d2647432a4ad98dbfe8d2)
     });
 
     /**
@@ -65,17 +65,17 @@ abstract contract BaseSepTestnetConfig {
         refundAddress: 0xD26C9387F92EEa2cD030440A0799E403B225B8dD
     });
 
-    //   FarmConfig REWARD_FARM_CONFIG = FarmConfig({
-    //       depositCap: 10000000e18,
-    //       depositCapPerUser: 10000000e18,
-    //       depositStartTime: 0,
-    //       depositEndTime: type(uint256).max,
-    //       rewardRate: 10000e18,
-    //       rewardStartTime: 0,
-    //       rewardEndTime: type(uint256).max,
-    //       claimStartTime: type(uint256).max,
-    //       claimEndTime: type(uint256).max,
-    //       claimDelayTime: 0,
-    //       claimAndStakeEnabled: false
-    //   });
+    FarmConfig REWARD_FARM_CONFIG = FarmConfig({
+        depositCap: 10000000e18,
+        depositCapPerUser: 10000000e18,
+        depositStartTime: 0,
+        depositEndTime: type(uint256).max,
+        rewardRate: 10000e18,
+        rewardStartTime: 0,
+        rewardEndTime: type(uint256).max,
+        claimStartTime: type(uint256).max,
+        claimEndTime: type(uint256).max,
+        claimDelayTime: 0,
+        instantClaimEnabled: true
+    });
 }
