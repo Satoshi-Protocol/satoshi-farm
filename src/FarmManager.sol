@@ -21,7 +21,6 @@ import {
 } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
 
-import { IOAppComposer } from "./interfaces/layerzero/IOAppComposer.sol";
 import { MessagingFee, SendParam } from "./interfaces/layerzero/IOFT.sol";
 import { OFTComposeMsgCodec } from "./interfaces/layerzero/OFTComposeMsgCodec.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -32,7 +31,7 @@ import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.so
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable, IOAppComposer {
+contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     // IRewardToken public rewardToken;
@@ -71,17 +70,21 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         external
         initializer
     {
-        _checkIsNotZeroAddress(address(_farmBeacon));
-        _checkIsNotZeroAddress(address(_rewardToken));
+        // _checkIsNotZeroAddress(address(_farmBeacon));
+        // _checkIsNotZeroAddress(address(_rewardToken));
 
         __Ownable_init(msg.sender);
         __Pausable_init();
         __UUPSUpgradeable_init();
 
+        farmBeacon = _farmBeacon;
+        rewardToken = _rewardToken;
+
         // if dstEid is current chain, create reward farm
-        if (_dstInfo.dstEid == lzConfig.eid) {
+        if (_dstInfo.dstEid == _lzConfig.eid) {
             IFarm farm = _createFarm(IERC20(_rewardToken), _farmConfig);
             _dstInfo.dstRewardFarm = farm;
+            _dstInfo.dstRewardManagerBytes32 = OFTComposeMsgCodec.addressToBytes32(address(this));
         } else if (_dstInfo.dstEid != 0) {
             _checkIsNotZeroAddress(address(_dstInfo.dstRewardFarm));
             _checkIsNotZero(uint256(_dstInfo.dstRewardManagerBytes32));
@@ -89,8 +92,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             revert InvalidZeroDstEid();
         }
 
-        farmBeacon = _farmBeacon;
-        rewardToken = _rewardToken;
         dstInfo = _dstInfo;
         lzConfig = _lzConfig;
 

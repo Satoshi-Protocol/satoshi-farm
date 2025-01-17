@@ -7,6 +7,7 @@ import { IRewardToken } from "./IRewardToken.sol";
 import { MessagingFee, SendParam } from "./layerzero/IOFT.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import { IOAppComposer } from "./layerzero/IOAppComposer.sol";
 
 enum LZ_COMPOSE_OPT {
     NONE,
@@ -88,7 +89,7 @@ struct ClaimAndStakeCrossChainParams {
     bytes extraOptions;
 }
 
-interface IFarmManager {
+interface IFarmManager is IOAppComposer {
     error InvalidFarm(IFarm farm);
     error InvalidAdmin(address expected, address actual);
     error FarmAlreadyExists(IFarm farm);
