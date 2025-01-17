@@ -369,7 +369,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         for (uint256 i = 0; i < stakePendingClaimCrossChainParamsArr.length; i++) {
             StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams =
                 stakePendingClaimCrossChainParamsArr[i];
-            SendParam memory sendParam = formatLzDepositRewardSendParam(
+            SendParam memory sendParam = formatDepositLzSendParam(
                 stakePendingClaimCrossChainParams.receiver,
                 stakePendingClaimCrossChainParams.amount,
                 stakePendingClaimCrossChainParams.extraOptions
@@ -395,14 +395,14 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        uint256 claimAndStakeAmt = farm.instantClaim(amount, msg.sender, address(this));
+        uint256 claimAmt = farm.instantClaim(amount, msg.sender, address(this));
 
         DepositParams memory depositParams =
-            DepositParams({ farm: dstInfo.dstRewardFarm, amount: amount, receiver: receiver });
+            DepositParams({ farm: dstInfo.dstRewardFarm, amount: claimAmt, receiver: receiver });
 
         _stake(depositParams);
 
-        emit ClaimAndStake(farm, claimAndStakeAmt, msg.sender, receiver);
+        emit ClaimAndStake(farm, claimAmt, msg.sender, receiver);
     }
 
     function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParamsArr) public whenNotPaused {
@@ -426,11 +426,11 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        uint256 claimAndStakeAmt = farm.instantClaim(amount, msg.sender, address(this));
+        uint256 claimAmt = farm.instantClaim(amount, msg.sender, address(this));
 
-        _stakeCrossChain(receiver, amount, extraOptions, msg.value);
+        _stakeCrossChain(receiver, claimAmt, extraOptions, msg.value);
 
-        emit ClaimAndStake(farm, claimAndStakeAmt, msg.sender, receiver);
+        emit ClaimAndStake(farm, claimAmt, msg.sender, receiver);
     }
 
     function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
@@ -442,7 +442,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         uint256[] memory feeAmountArr = new uint256[](claimAndStakeCrossChainParamsArr.length);
         for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
             ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams = claimAndStakeCrossChainParamsArr[i];
-            SendParam memory sendParam = formatLzDepositRewardSendParam(
+            SendParam memory sendParam = formatDepositLzSendParam(
                 claimAndStakeCrossChainParams.receiver,
                 claimAndStakeCrossChainParams.amount,
                 claimAndStakeCrossChainParams.extraOptions
@@ -553,20 +553,20 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         }
     }
 
-    function formatLzDepositRewardSendParam(
+    function formatDepositLzSendParam(
         address receiver,
         uint256 amount,
         bytes memory extraOptions
     )
         public
         view
-        returns (SendParam memory sendParam)
+        returns (SendParam memory)
     {
         bytes memory composeMsg = abi.encode(
             LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(DepositParams(dstInfo.dstRewardFarm, amount, receiver))
         );
 
-        sendParam = SendParam(
+        return SendParam(
             dstInfo.dstEid,
             dstInfo.dstRewardManagerBytes32,
             amount,
@@ -594,7 +594,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     function _stakeCrossChain(address receiver, uint256 amount, bytes memory extraOptions, uint256 msgValue) internal {
-        SendParam memory sendParam = formatLzDepositRewardSendParam(receiver, amount, extraOptions);
+        SendParam memory sendParam = formatDepositLzSendParam(receiver, amount, extraOptions);
         MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
         if (msgValue < expectFee.nativeFee) revert InsufficientFee(expectFee.nativeFee, msgValue);
 

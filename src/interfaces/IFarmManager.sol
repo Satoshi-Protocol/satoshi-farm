@@ -13,18 +13,38 @@ enum LZ_COMPOSE_OPT {
     DEPOSIT_REWARD_TOKEN
 }
 
+/**
+ * @notice The current chain's LayerZero configuration
+ * @param eid The current chain's endpoint id
+ * @param endpoint The current chain's endpoint
+ * @param refundAddress The address to refund
+ */
 struct LzConfig {
     uint32 eid;
     address endpoint;
     address refundAddress;
 }
 
+/**
+ * @notice The destination chain's information
+ * @dev The farm of reward token will be deployed on the destination chain and the only one
+ * @param dstEid The destination chain's endpoint id
+ * @param dstRewardFarm The destination chain's reward farm
+ * @param dstRewardManagerBytes32 The destination chain's reward farm address in bytes32
+ */
 struct DstInfo {
     uint32 dstEid;
     IFarm dstRewardFarm;
     bytes32 dstRewardManagerBytes32;
 }
 
+/**
+ * @notice The parameters for depositing with proof
+ * @param farm The farm to deposit
+ * @param amount The amount to deposit
+ * @param receiver The receiver of the deposit
+ * @param merkleProof The merkle proof checking the whitelist
+ */
 struct DepositWithProofParams {
     IFarm farm;
     uint256 amount;
@@ -32,24 +52,50 @@ struct DepositWithProofParams {
     bytes32[] merkleProof;
 }
 
+/**
+ * @notice The parameters for depositing
+ * @param farm The farm to deposit
+ * @param amount The amount to deposit
+ * @param receiver The receiver of the deposit
+ */
 struct DepositParams {
     IFarm farm;
     uint256 amount;
     address receiver;
 }
 
+/**
+ * @notice The parameters for withdrawing
+ * @param farm The farm to withdraw
+ * @param amount The amount to withdraw underlying asset
+ * @param receiver The receiver of the withdrawal
+ */
 struct WithdrawParams {
     IFarm farm;
     uint256 amount;
     address receiver;
 }
 
+/**
+ * @notice The parameters for requesting claim
+ * @param farm The farm to request claim
+ * @param amount The amount requested to claim
+ * @param receiver The receiver of the claim
+ */
 struct RequestClaimParams {
     IFarm farm;
     uint256 amount;
     address receiver;
 }
 
+/**
+ * @notice The parameters for executing claim
+ * @param farm The farm to execute claim
+ * @param amount The amount to claim
+ * @param owner The owner of the claim
+ * @param claimableTime The claimable time of the claim
+ * @param claimId The id of the claim
+ */
 struct ExecuteClaimParams {
     IFarm farm;
     uint256 amount;
@@ -58,6 +104,15 @@ struct ExecuteClaimParams {
     bytes32 claimId;
 }
 
+/**
+ * @notice The parameters for staking pending claim
+ * @dev Only used if the reward farm deployed chain is current chain
+ * @param farm The farm to stake pending claim
+ * @param amount The amount to stake
+ * @param receiver The receiver of the stake
+ * @param claimableTime The claimable time of the claim
+ * @param claimId The id of the claim
+ */
 struct StakePendingClaimParams {
     IFarm farm;
     uint256 amount;
@@ -66,6 +121,16 @@ struct StakePendingClaimParams {
     bytes32 claimId;
 }
 
+/**
+ * @notice The parameters for staking pending claim cross chain
+ * @dev Only used if the reward farm deployed chain is different from the current chain
+ * @param farm The farm to stake pending claim
+ * @param amount The amount of pending claim
+ * @param receiver The receiver of the pending claim
+ * @param claimableTime The claimable time of the pending claim
+ * @param claimId The id of the pending claim
+ * @param extraOptions The extra options for L0 cross chain
+ */
 struct StakePendingClaimCrossChainParams {
     IFarm farm;
     uint256 amount;
@@ -75,12 +140,27 @@ struct StakePendingClaimCrossChainParams {
     bytes extraOptions;
 }
 
+/**
+ * @notice The parameters for instant claim and stake to reward farm
+ * @dev Only used if the reward farm deployed chain is current chain
+ * @param farm The farm to claim and stake
+ * @param amount The amount to claim and stake
+ * @param receiver The receiver of the claim and stake
+ */
 struct ClaimAndStakeParams {
     IFarm farm;
     uint256 amount;
     address receiver;
 }
 
+/**
+ * @notice The parameters for instant claim and stake to reward farm cross chain
+ * @dev Only used if the reward farm deployed chain is different from the current chain
+ * @param farm The farm to claim and stake
+ * @param amount The amount to claim and stake
+ * @param receiver The receiver of the claim and stake
+ * @param extraOptions The extra options for L0 cross chain
+ */
 struct ClaimAndStakeCrossChainParams {
     IFarm farm;
     uint256 amount;
@@ -139,106 +219,337 @@ interface IFarmManager {
     );
     event ClaimAndStake(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
 
+    /**
+     * @notice Initialize the farm manager
+     * @param farmBeacon The farm beacon contract
+     * @param rewardToken The reward token
+     * @param dstInfo The reward farm's destination chain information
+     * @param lzConfig The current chain's LayerZero configuration
+     * @param farmConfig The farm configuration
+     */
     function initialize(
         IBeacon farmBeacon,
         IRewardToken rewardToken,
-        DstInfo memory _dstInfo,
-        LzConfig memory _lzConfig,
-        FarmConfig memory _farmConfig
+        DstInfo memory dstInfo,
+        LzConfig memory lzConfig,
+        FarmConfig memory farmConfig
     )
         external;
 
+    /**
+     * @notice Update the farm configuration
+     * @param farm The farm to update
+     * @param farmConfig The farm configuration
+     */
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external;
 
-    function createFarm(IERC20 underlyingAsset, FarmConfig memory farmConfig) external returns (address);
+    /**
+     * @notice Create a farm
+     * @param underlyingAsset The underlying asset of the farm
+     * @param farmConfig The farm configuration
+     * @return farm The farm address
+     */
+    function createFarm(IERC20 underlyingAsset, FarmConfig memory farmConfig) external returns (address farm);
 
+    /**
+     * @notice Deposit Native Asset with proof
+     * @dev Only used if the underlying asset is native asset
+     * @dev Only whitelisted users can deposit with proof
+     * @param depositParams The deposit parameters
+     */
     function depositNativeAssetWithProof(DepositWithProofParams memory depositParams) external payable;
 
+    /**
+     * @notice Deposit Native Asset with proof batch
+     * @dev Only used if the underlying asset is native asset
+     * @dev Only whitelisted users can deposit with proof
+     * @param depositParamsArr The deposit parameters array
+     */
     function depositNativeAssetWithProofBatch(DepositWithProofParams[] memory depositParamsArr) external payable;
 
+    /**
+     * @notice Deposit ERC20 with proof
+     * @dev Only used if the underlying asset is ERC20
+     * @dev Only whitelisted users can deposit with proof
+     * @param depositParams The deposit parameters
+     */
     function depositERC20WithProof(DepositWithProofParams memory depositParams) external;
 
+    /**
+     * @notice Deposit ERC20 with proof batch
+     * @dev Only used if the underlying asset is ERC20
+     * @dev Only whitelisted users can deposit with proof
+     * @param depositParamsArr The deposit parameters array
+     */
     function depositERC20WithProofBatch(DepositWithProofParams[] memory depositParamsArr) external;
 
+    /**
+     * @notice Deposit Native Asset
+     * @dev Only used if the underlying asset is native asset
+     * @param depositParams The deposit parameters
+     */
     function depositNativeAsset(DepositParams memory depositParams) external payable;
 
+    /**
+     * @notice Deposit Native Asset batch
+     * @dev Only used if the underlying asset is native asset
+     * @param depositParamsArr The deposit parameters array
+     */
     function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) external payable;
 
+    /**
+     * @notice Deposit ERC20
+     * @dev Only used if the underlying asset is ERC20
+     * @param depositParams The deposit parameters
+     */
     function depositERC20(DepositParams memory depositParams) external;
 
+    /**
+     * @notice Deposit ERC20 batch
+     * @dev Only used if the underlying asset is ERC20
+     * @param depositParamsArr The deposit parameters array
+     */
     function depositERC20Batch(DepositParams[] memory depositParamsArr) external;
 
+    /**
+     * @notice Withdraw
+     * @param withdrawParams The withdraw parameters
+     */
     function withdraw(WithdrawParams memory withdrawParams) external;
 
+    /**
+     * @notice Withdraw batch
+     * @param withdrawParamsArr The withdraw parameters array
+     */
     function withdrawBatch(WithdrawParams[] memory withdrawParamsArr) external;
 
+    /**
+     * @notice Request claim
+     * @param requestClaimParams The request claim parameters
+     */
     function requestClaim(RequestClaimParams memory requestClaimParams) external;
 
+    /**
+     * @notice Request claim batch
+     * @param requestClaimParamsArr The request claim parameters array
+     */
     function requestClaimBatch(RequestClaimParams[] memory requestClaimParamsArr) external;
 
+    /**
+     * @notice Execute claim
+     * @param executeClaimParams The execute claim parameters
+     */
     function executeClaim(ExecuteClaimParams memory executeClaimParams) external;
 
+    /**
+     * @notice Execute claim batch
+     * @param executeClaimParamsArr The execute claim parameters array
+     */
     function executeClaimBatch(ExecuteClaimParams[] memory executeClaimParamsArr) external;
 
+    /**
+     * @notice Stake pending claim
+     * @dev Only used if the reward farm deployed chain is current chain
+     * @dev Only used if the claim is requested
+     * @param stakePendingClaimParams The stake pending claim parameters
+     */
     function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) external;
 
+    /**
+     * @notice Stake pending claim batch
+     * @dev Only used if the reward farm deployed chain is current chain
+     * @dev Only used if the claim is requested
+     * @param stakePendingClaimParamsArr The stake pending claim parameters array
+     */
     function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParamsArr) external;
 
+    /**
+     * @notice Stake pending claim cross chain
+     * @dev Only used if the reward farm deployed chain is different from the current chain
+     * @dev Only used if the claim is requested
+     * @param stakePendingClaimCrossChainParams The stake pending claim cross chain parameters
+     */
     function stakePendingClaimCrossChain(StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams)
         external
         payable;
 
+    /**
+     * @notice Stake pending claim cross chain batch
+     * @dev Only used if the reward farm deployed chain is different from the current chain
+     * @dev Only used if the claim is requested
+     * @param stakePendingClaimCrossChainParamsArr The stake pending claim cross chain parameters array
+     */
     function stakePendingClaimCrossChainBatch(
         StakePendingClaimCrossChainParams[] memory stakePendingClaimCrossChainParamsArr
     )
         external
         payable;
 
+    /**
+     * @notice Claim and stake
+     * @dev Only used if the reward farm deployed chain is current chain
+     * @param claimAndStakeParams The claim and stake parameters
+     */
     function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) external;
 
+    /**
+     * @notice Claim and stake batch
+     * @dev Only used if the reward farm deployed chain is current chain
+     * @param claimAndStakeParamsArr The claim and stake parameters array
+     */
     function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParamsArr) external;
 
+    /**
+     * @notice Claim and stake cross chain
+     * @dev Only used if the reward farm deployed chain is different from the current chain
+     * @param claimAndStakeCrossChainParams The claim and stake cross chain parameters
+     */
     function claimAndStakeCrossChain(ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams)
         external
         payable;
 
+    /**
+     * @notice Claim and stake cross chain batch
+     * @dev Only used if the reward farm deployed chain is different from the current chain
+     * @param claimAndStakeCrossChainParamsArr The claim and stake cross chain parameters array
+     */
     function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
         external
         payable;
 
+    /**
+     * @notice Mint reward token
+     * @dev Only called by the deployed farm
+     * @param to The receiver of the minted reward token
+     * @param amount The amount to mint
+     */
     function mintRewardCallback(address to, uint256 amount) external;
 
+    /**
+     * @notice Transfer underlying asset when depositing
+     * @dev Only called by the deployed farm
+     * @param token the underlying asset
+     * @param from The sender of the transfer
+     * @param amount The amount to transfer
+     */
     function transferCallback(IERC20 token, address from, uint256 amount) external;
 
-    function totalShares(IFarm farm) external view returns (uint256);
+    /**
+     * @notice Total shares of the farm
+     * @param farm The farm to query
+     * @return totalShares The total shares of the farm
+     */
+    function totalShares(IFarm farm) external view returns (uint256 totalShares);
 
-    function shares(IFarm farm, address addr) external view returns (uint256);
+    /**
+     * @notice Shares of the user
+     * @param farm The farm to query
+     * @param addr The user address
+     * @return shares The shares of the user
+     */
+    function shares(IFarm farm, address addr) external view returns (uint256 shares);
 
-    function previewReward(IFarm farm, address addr) external view returns (uint256);
+    /**
+     * @notice Preview reward of the user
+     * @param farm The farm to query
+     * @param addr The user address
+     * @return reward The preview reward of the user
+     */
+    function previewReward(IFarm farm, address addr) external view returns (uint256 reward);
 
-    function lastRewardPerToken(IFarm farm) external view returns (uint256);
+    /**
+     * @notice Last reward per token
+     * @param farm The farm to query
+     * @return lastRewardPerToken The last reward per token
+     */
+    function lastRewardPerToken(IFarm farm) external view returns (uint256 lastRewardPerToken);
 
-    function lastUpdateTime(IFarm farm) external view returns (uint256);
+    /**
+     * @notice Last update time
+     * @param farm The farm to query
+     * @return lastUpdateTime The last update time
+     */
+    function lastUpdateTime(IFarm farm) external view returns (uint256 lastUpdateTime);
 
-    function getLastUserRewardPerToken(IFarm farm, address addr) external view returns (uint256);
+    /**
+     * @notice Last user reward per token
+     * @param farm The farm to query
+     * @param addr The user address
+     * @return lastUserRewardPerToken The last user reward per token
+     */
+    function getLastUserRewardPerToken(
+        IFarm farm,
+        address addr
+    )
+        external
+        view
+        returns (uint256 lastUserRewardPerToken);
 
-    function getPendingReward(IFarm farm, address addr) external view returns (uint256);
+    /**
+     * @notice Pending reward of the user
+     * @param farm The farm to query
+     * @param addr The user address
+     * @return pendingReward The pending reward of the user
+     */
+    function getPendingReward(IFarm farm, address addr) external view returns (uint256 pendingReward);
 
-    function isDepositEnabled(IFarm farm) external view returns (bool);
+    /**
+     * @notice Deposit is enabled or not
+     * @param farm The farm to query
+     * @return depositEnabled The deposit is enabled or not
+     */
+    function isDepositEnabled(IFarm farm) external view returns (bool depositEnabled);
 
-    function isClaimable(IFarm farm) external view returns (bool);
+    /**
+     * @notice Claim is enabled or not
+     * @param farm The farm to query
+     * @return claimable The claim is enabled or not
+     */
+    function isClaimable(IFarm farm) external view returns (bool claimable);
 
-    function isValidFarm(IFarm farm) external view returns (bool);
+    /**
+     * @notice Farm is valid or not
+     * @param farm The farm to query
+     * @return validFarm The farm is valid or not
+     */
+    function isValidFarm(IFarm farm) external view returns (bool validFarm);
 
+    /**
+     * @notice LayerZero configuration
+     * @return eid The current chain's endpoint id
+     * @return endpoint The current chain's endpoint
+     * @return refundAddress The address to refund
+     */
     function lzConfig() external returns (uint32 eid, address endpoint, address refundAddress);
 
-    function updateLzConfig(LzConfig memory config) external;
+    /**
+     * @notice Update LayerZero configuration
+     * @param lzConfig The LayerZero configuration to update
+     */
+    function updateLzConfig(LzConfig memory lzConfig) external;
 
+    /**
+     * @notice Destination chain's information of the reward farm
+     * @return dstEid The destination chain's endpoint id
+     * @return dstRewardFarm The destination chain's reward farm
+     * @return dstRewardFarmBytes32 The destination chain's reward farm address in bytes32
+     */
     function dstInfo() external view returns (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32);
 
-    function updateDstInfo(DstInfo memory _dstInfo) external;
+    /**
+     * @notice Update destination chain's information
+     * @param dstInfo The destination chain's information to update
+     */
+    function updateDstInfo(DstInfo memory dstInfo) external;
 
-    function formatLzDepositRewardSendParam(
+    /**
+     * @notice Format the send param for deposit
+     * @param receiver The receiver of the deposit
+     * @param amount The amount to deposit
+     * @param extraOptions The extra options for L0 cross chain
+     * @return sendParam The send param for deposit
+     */
+    function formatDepositLzSendParam(
         address receiver,
         uint256 amount,
         bytes memory extraOptions

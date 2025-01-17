@@ -199,9 +199,9 @@ contract Farm is IFarm, Initializable {
     function instantClaim(uint256 amount, address owner, address receiver) external onlyFarmManager returns (uint256) {
         _beforeInstantClaim(amount, owner, receiver);
 
-        uint256 claimAndStakeAmt = _instantClaim(amount, owner, receiver);
+        uint256 claimAmt = _instantClaim(amount, owner, receiver);
 
-        return claimAndStakeAmt;
+        return claimAmt;
     }
 
     function previewReward(address addr) external view returns (uint256) {
