@@ -55,25 +55,26 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         bytes memory data = abi.encodeCall(FarmManager.initialize, (farmBeacon, IRewardToken(REWARD_TOKEN_ADDRESS), DST_INFO, LZ_CONFIG, REWARD_FARM_CONFIG));
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
-        if(IS_DEPLOY_MEME_FARM) {
-            ERC20Mock memeAsset = new ERC20Mock("ARB_MEME", "ARB_MEME");
-            memeAsset.mint(deployer, 10000000e18);
-            IFarm memeFarm = IFarm(address(farmManager.createFarm(memeAsset, REWARD_FARM_CONFIG)));
-            console.log("memeFarm:", address(memeFarm));
-            memeAsset.approve(address(farmManager), type(uint256).max);
-            farmManager.depositERC20(DepositParams(memeFarm, 1000000e18, deployer));
-        }
+        ERC20Mock memeAsset = new ERC20Mock("ARB_MEME", "ARB_MEME");
+        memeAsset.mint(deployer, 10000000e18);
+        IFarm memeFarm = IFarm(address(farmManager.createFarm(memeAsset, REWARD_FARM_CONFIG)));
+
+        memeAsset.approve(address(farmManager), type(uint256).max);
+        farmManager.depositERC20(DepositParams(memeFarm, 1000000e18, deployer));
 
         vm.stopBroadcast();
-        console.log("Deployed contracts:");
+        console.log("== Deployed contracts ==");
         console.log("rewardToken:", address(REWARD_TOKEN_ADDRESS));
         console.log("farmImpl:", address(farmImpl));
         console.log("farmManagerImpl:", address(farmManagerImpl));
         console.log("farmBeacon:", address(farmBeacon));
         console.log("farmManager:", address(farmManager));
+        console.log("== Meme contracts ==");
+        console.log("memeAsset:", address(memeAsset));
+        console.log("memeFarm:", address(memeFarm));
         if(DST_INFO.dstEid == LZ_CONFIG.eid) {
             (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32) = farmManager.dstInfo();
-            console.log("Deployed DST_INFO:");
+            console.log("== DstInfo ==");
             console.log("dstEid:", dstEid);
             console.log("dstRewardFarm:", address(dstRewardFarm));
             console.log("dstRewardFarmBytes32:");

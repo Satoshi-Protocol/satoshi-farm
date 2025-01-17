@@ -52,8 +52,8 @@ abstract contract BaseSepTestnetConfig {
      */
     DstInfo DST_INFO = DstInfo({
         dstEid: 40_231, // Arbitrum Sepolia chain
-        dstRewardFarm: IFarm(address(0x6cD730086F1207BaeC44DE221beD156d82872575)),
-        dstRewardManagerBytes32: bytes32(0x0000000000000000000000007adc26353ed163fce40d2647432a4ad98dbfe8d2)
+        dstRewardFarm: IFarm(address(0x3233ec018b2C1fB23FCd2291E43B873D9A6bdfAB)),
+        dstRewardManagerBytes32: bytes32(0x0000000000000000000000006001345f8513a1954570e5b6a0d214a2b2df239d)
     });
 
     /**
