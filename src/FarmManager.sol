@@ -592,6 +592,50 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return validFarms[farm];
     }
 
+    /// @inheritdoc IFarmManager
+    function getUnderlyingAsset(IFarm farm) external view returns (IERC20) {
+        return farm.underlyingAsset();
+    }
+
+    /// @inheritdoc IFarmManager
+    function getFarmConfig(IFarm farm) external view returns (FarmConfig memory) {
+        (
+            uint256 depositCap,
+            uint256 depositCapPerUser,
+            uint256 depositStartTime,
+            uint256 depositEndTime,
+            uint256 rewardRate,
+            uint256 rewardStartTime,
+            uint256 rewardEndTime,
+            uint256 claimStartTime,
+            uint256 claimEndTime,
+            uint256 claimDelayTime,
+            bool withdrawEnabled,
+            bool instantClaimEnabled
+        ) = farm.farmConfig();
+
+        return FarmConfig(
+            depositCap,
+            depositCapPerUser,
+            depositStartTime,
+            depositEndTime,
+            rewardRate,
+            rewardStartTime,
+            rewardEndTime,
+            claimStartTime,
+            claimEndTime,
+            claimDelayTime,
+            withdrawEnabled,
+            instantClaimEnabled
+        );
+    }
+
+    /// @inheritdoc IFarmManager
+    function getWhitelistConfig(IFarm farm) external view returns (WhitelistConfig memory) {
+        (bool enabled, bytes32 merkleRoot) = farm.whitelistConfig();
+        return WhitelistConfig(enabled, merkleRoot);
+    }
+
     /// @notice Handles incoming composed messages from LayerZero.
     /// @dev Decodes the message payload to perform a token swap.
     ///      This method expects the encoded compose message to contain the swap amount and recipient address.

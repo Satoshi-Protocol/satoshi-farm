@@ -556,6 +556,27 @@ interface IFarmManager is IOAppComposer {
     function isValidFarm(IFarm farm) external view returns (bool validFarm);
 
     /**
+     * @notice Get the underlying asset of the farm
+     * @param farm The farm to query
+     * @return underlyingAsset The underlying asset of the farm
+     */
+    function getUnderlyingAsset(IFarm farm) external view returns (IERC20 underlyingAsset);
+
+    /**
+     * @notice Get the farm configuration
+     * @param farm The farm to query
+     * @return farmConfig The farm configuration
+     */
+    function getFarmConfig(IFarm farm) external view returns (FarmConfig memory farmConfig);
+
+    /**
+     * @notice Get the whitelist configuration
+     * @param farm The farm to query
+     * @return whitelistConfig The whitelist configuration
+     */
+    function getWhitelistConfig(IFarm farm) external view returns (WhitelistConfig memory whitelistConfig);
+
+    /**
      * @notice LayerZero configuration
      * @return eid The current chain's endpoint id
      * @return endpoint The current chain's endpoint

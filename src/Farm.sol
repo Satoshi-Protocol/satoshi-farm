@@ -81,6 +81,14 @@ contract Farm is IFarm, Initializable {
         _;
     }
 
+    /**
+     * @notice modifier for only whitelist enabled
+     */
+    modifier onlyWhitelistEnabled() {
+        if (!whitelistConfig.enabled) revert WhitelistNotEnabled();
+        _;
+    }
+
     /// @inheritdoc IFarm
     function initialize(
         address _underlyingAsset,
@@ -180,7 +188,7 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
-    function withdraw(uint256 amount, address owner, address receiver) external onlyFarmManager {
+    function withdraw(uint256 amount, address owner, address receiver) external onlyFarmManager onlyWhitelistEnabled {
         _beforeWithdraw(amount, owner, receiver);
 
         _withdraw(amount, owner, receiver);

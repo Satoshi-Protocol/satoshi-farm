@@ -21,6 +21,7 @@ address constant DEFAULT_NATIVE_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEe
  * @param claimStartTime claim start time
  * @param claimEndTime claim end time
  * @param claimDelayTime delay time for claim
+ * @param withdrawEnabled is withdraw enabled
  * @param instantClaimEnabled is instant claim enabled
  */
 struct FarmConfig {
@@ -34,6 +35,7 @@ struct FarmConfig {
     uint256 claimStartTime;
     uint256 claimEndTime;
     uint256 claimDelayTime;
+    bool withdrawEnabled;
     bool instantClaimEnabled;
 }
 
@@ -341,6 +343,7 @@ interface IFarm {
      * @return claimStartTime The claim start time
      * @return claimEndTime The claim end time
      * @return claimDelayTime The claim delay time
+     * @return withdrawEnabled The withdraw enabled
      * @return instantClaimEnabled The instant claim enabled
      */
     function farmConfig()
@@ -357,6 +360,7 @@ interface IFarm {
             uint256 claimStartTime,
             uint256 claimEndTime,
             uint256 claimDelayTime,
+            bool withdrawEnabled,
             bool instantClaimEnabled
         );
 

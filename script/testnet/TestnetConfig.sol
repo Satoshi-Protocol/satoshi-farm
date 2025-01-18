@@ -39,6 +39,7 @@ abstract contract ArbSepTestnetConfig {
         claimStartTime: type(uint256).max,
         claimEndTime: type(uint256).max,
         claimDelayTime: 0,
+        withdrawEnabled: false,
         instantClaimEnabled: true
     });
 }
@@ -76,6 +77,7 @@ abstract contract BaseSepTestnetConfig {
         claimStartTime: type(uint256).max,
         claimEndTime: type(uint256).max,
         claimDelayTime: 0,
+        withdrawEnabled: false,
         instantClaimEnabled: true
     });
 }
