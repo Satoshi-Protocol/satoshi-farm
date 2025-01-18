@@ -13,31 +13,56 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
+/**
+ * @title Farm contract
+ * @dev A contract for depositing underlying assets to earn rewards
+ * @dev Using Beacon Proxy pattern
+ * @dev Deployed and managed by FarmManager
+ */
 contract Farm is IFarm, Initializable {
     using SafeERC20 for IERC20;
     using SafeERC20 for IRewardToken;
 
-    // --- state variables ---
+    /* --- state variables --- */
+
+    /// @inheritdoc IFarm
     IERC20 public underlyingAsset;
+    /// @inheritdoc IFarm
     IFarmManager public farmManager;
+    /// @inheritdoc IFarm
     FarmConfig public farmConfig;
+    /// @inheritdoc IFarm
     WhitelistConfig public whitelistConfig;
 
+    /// total underlying asset shares
     uint256 internal _totalShares;
+    /// last reward per token
     uint256 internal _lastRewardPerToken;
+    /// last update time
     uint256 internal _lastUpdateTime;
-
+    /// user shares mapping (user => shares)
     mapping(address => uint256) internal _shares;
+    /// last user reward per token mapping (user => lastUserRewardPerToken)
     mapping(address => uint256) internal _lastUserRewardPerToken;
+    /// pending rewards mapping (user => pendingRewards)
     mapping(address => uint256) internal _pendingRewards;
-    // claimId(keccak256(amount, owner, receiver, claimableTime)) => ClaimStatus
-    mapping(bytes32 => ClaimStatus) internal _claimStatus;
+    /// claim status mapping (claimId => ClaimStatus)
+    /// claimId = keccak256(amount, owner, receiver, claimableTime)
+    mapping(bytes32 /* claimId */ => ClaimStatus) internal _claimStatus;
 
+    /**
+     * @notice modifier for only farm manager
+     */
     modifier onlyFarmManager() {
         if (msg.sender != address(farmManager)) revert InvalidFarmManager(msg.sender);
         _;
     }
 
+    /**
+     * @notice modifier for only whitelist
+     * @param depositor The depositor address
+     * @param merkleProof The merkle proof
+     */
     modifier onlyWhitelist(address depositor, bytes32[] calldata merkleProof) {
         if (whitelistConfig.enabled == false) revert WhitelistNotEnabled();
 
@@ -48,11 +73,15 @@ contract Farm is IFarm, Initializable {
         _;
     }
 
+    /**
+     * @notice modifier for only whitelist not enabled
+     */
     modifier onlyWhitelistNotEnabled() {
         if (whitelistConfig.enabled) revert WhitelistEnabled();
         _;
     }
 
+    /// @inheritdoc IFarm
     function initialize(
         address _underlyingAsset,
         address _farmManager,
@@ -72,6 +101,7 @@ contract Farm is IFarm, Initializable {
         emit FarmConfigUpdated(_farmConfig);
     }
 
+    /// @inheritdoc IFarm
     function updateFarmConfig(FarmConfig memory _farmConfig) external onlyFarmManager {
         _checkFarmConfig(_farmConfig);
         _updateLastRewardPerToken(_calcRewardPerToken());
@@ -79,11 +109,13 @@ contract Farm is IFarm, Initializable {
         emit FarmConfigUpdated(_farmConfig);
     }
 
+    /// @inheritdoc IFarm
     function updateWhitelistConfig(WhitelistConfig memory _whitelistConfig) external onlyFarmManager {
         whitelistConfig = _whitelistConfig;
         emit WhitelistConfigUpdated(_whitelistConfig);
     }
 
+    /// @inheritdoc IFarm
     function depositNativeAssetWithProof(
         uint256 amount,
         address depositor,
@@ -100,6 +132,7 @@ contract Farm is IFarm, Initializable {
         _depositNativeAsset(amount, depositor, receiver);
     }
 
+    /// @inheritdoc IFarm
     function depositERC20WithProof(
         uint256 amount,
         address depositor,
@@ -115,6 +148,7 @@ contract Farm is IFarm, Initializable {
         _depositERC20(amount, depositor, receiver);
     }
 
+    /// @inheritdoc IFarm
     function depositNativeAsset(
         uint256 amount,
         address depositor,
@@ -130,6 +164,7 @@ contract Farm is IFarm, Initializable {
         _depositNativeAsset(amount, depositor, receiver);
     }
 
+    /// @inheritdoc IFarm
     function depositERC20(
         uint256 amount,
         address depositor,
@@ -144,12 +179,14 @@ contract Farm is IFarm, Initializable {
         _depositERC20(amount, depositor, receiver);
     }
 
+    /// @inheritdoc IFarm
     function withdraw(uint256 amount, address owner, address receiver) external onlyFarmManager {
         _beforeWithdraw(amount, owner, receiver);
 
         _withdraw(amount, owner, receiver);
     }
 
+    /// @inheritdoc IFarm
     function requestClaim(
         uint256 amount,
         address owner,
@@ -166,6 +203,7 @@ contract Farm is IFarm, Initializable {
         return (claimAmt, claimableTime, claimId);
     }
 
+    /// @inheritdoc IFarm
     function executeClaim(
         uint256 amount,
         address owner,
@@ -181,6 +219,7 @@ contract Farm is IFarm, Initializable {
         _executeClaim(amount, owner, receiver, claimableTime, claimId);
     }
 
+    /// @inheritdoc IFarm
     function forceExecuteClaim(
         uint256 amount,
         address owner,
@@ -196,6 +235,7 @@ contract Farm is IFarm, Initializable {
         _forceExecuteClaim(amount, owner, receiver, claimableTime, claimId);
     }
 
+    /// @inheritdoc IFarm
     function instantClaim(uint256 amount, address owner, address receiver) external onlyFarmManager returns (uint256) {
         _beforeInstantClaim(amount, owner, receiver);
 
@@ -204,76 +244,109 @@ contract Farm is IFarm, Initializable {
         return claimAmt;
     }
 
+    /// @inheritdoc IFarm
     function previewReward(address addr) external view returns (uint256) {
         uint256 rewardAmount = _calcUserReward(addr, _calcRewardPerToken());
         return rewardAmount + _pendingRewards[addr];
     }
 
+    /// @inheritdoc IFarm
     function totalShares() external view returns (uint256) {
         return _totalShares;
     }
 
+    /// @inheritdoc IFarm
     function shares(address addr) external view returns (uint256) {
         return _shares[addr];
     }
 
+    /// @inheritdoc IFarm
     function lastRewardPerToken() external view returns (uint256) {
         return _lastRewardPerToken;
     }
 
+    /// @inheritdoc IFarm
     function lastUpdateTime() external view returns (uint256) {
         return _lastUpdateTime;
     }
 
+    /// @inheritdoc IFarm
     function getClaimStatus(bytes32 claimId) external view returns (ClaimStatus) {
         return _claimStatus[claimId];
     }
 
+    /// @inheritdoc IFarm
     function getLastUserRewardPerToken(address addr) external view returns (uint256) {
         return _lastUserRewardPerToken[addr];
     }
 
+    /// @inheritdoc IFarm
     function getPendingReward(address addr) external view returns (uint256) {
         return _pendingRewards[addr];
     }
 
+    /// @inheritdoc IFarm
     function isDepositEnabled() external view returns (bool) {
         return _isDepositEnabled();
     }
 
+    /// @inheritdoc IFarm
     function isClaimable() external view returns (bool) {
         return _isClaimable();
     }
 
-    // --- internal functions ---
+    /* --- internal functions --- */
 
+    /**
+     * @notice Check if deposit is enabled
+     */
     function _checkIsDepositEnabled() internal view {
         if (!_isDepositEnabled()) {
             revert InvalidDepositTime(block.timestamp, farmConfig.depositStartTime, farmConfig.depositEndTime);
         }
     }
 
+    /**
+     * @notice Check if claim is claimable
+     */
     function _checkIsClaimable() internal view {
         if (!_isClaimable()) revert InvalidClaimTime(block.timestamp);
     }
 
+    /**
+     * @notice Check if instant claim is enabled
+     */
     function _checkIsInstantClaimEnabled() internal view {
         if (!_isInstantClaimEnabled()) revert InstantClaimNotEnabled();
     }
 
+    /**
+     * @notice Check if deposit is enabled
+     */
     function _isDepositEnabled() internal view returns (bool) {
         return block.timestamp >= farmConfig.depositStartTime && block.timestamp <= farmConfig.depositEndTime;
     }
 
+    /**
+     * @notice Check if claim is claimable
+     */
     function _isClaimable() internal view returns (bool) {
         return block.timestamp >= farmConfig.claimStartTime && block.timestamp <= farmConfig.claimEndTime;
     }
 
+    /**
+     * @notice Check if instant claim is enabled
+     */
     function _isInstantClaimEnabled() internal view returns (bool) {
         return farmConfig.instantClaimEnabled;
     }
 
-    function _beforeDeposit(uint256 amount, address, address receiver) internal {
+    /**
+     * @notice Before deposit hook
+     * @param amount The deposit amount
+     * @param receiver The receiver address
+     */
+    function _beforeDeposit(uint256 amount, address, /* depositor */ address receiver) internal {
         if (amount == 0) revert InvalidZeroAmount();
 
         if (_totalShares + amount > farmConfig.depositCap) revert DepositCapExceeded(amount, farmConfig.depositCap);
@@ -287,6 +360,12 @@ contract Farm is IFarm, Initializable {
         _updateReward(receiver);
     }
 
+    /**
+     * @notice Deposit native asset internal function
+     * @param amount The deposit amount
+     * @param depositor The depositor address
+     * @param receiver The receiver address
+     */
     function _depositNativeAsset(uint256 amount, address depositor, address receiver) internal {
         if (address(underlyingAsset) != DEFAULT_NATIVE_ASSET_ADDRESS) revert InvalidDepositNativeAsset();
 
@@ -297,6 +376,12 @@ contract Farm is IFarm, Initializable {
         emit Deposit(amount, depositor, receiver);
     }
 
+    /**
+     * @notice Deposit ERC20 token internal function
+     * @param amount The deposit amount
+     * @param depositor The depositor address
+     * @param receiver The receiver address
+     */
     function _depositERC20(uint256 amount, address depositor, address receiver) internal {
         if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) revert InvalidDepositERC20();
 
@@ -307,13 +392,24 @@ contract Farm is IFarm, Initializable {
         emit Deposit(amount, depositor, receiver);
     }
 
-    function _beforeWithdraw(uint256 amount, address owner, address) internal {
+    /**
+     * @notice Before withdraw hook
+     * @param amount The withdraw amount
+     * @param owner The owner address
+     */
+    function _beforeWithdraw(uint256 amount, address owner, address /* receiver */ ) internal {
         uint256 ownerShares = _shares[owner];
         if (amount > ownerShares) revert AmountExceedsShares(amount, ownerShares);
 
         _updateReward(owner);
     }
 
+    /**
+     * @notice Withdraw internal function
+     * @param amount The withdraw amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     */
     function _withdraw(uint256 amount, address owner, address receiver) internal {
         _updateShares(amount, owner, false);
 
@@ -329,12 +425,22 @@ contract Farm is IFarm, Initializable {
         emit Withdraw(amount, owner, receiver);
     }
 
-    function _beforeRequestClaim(uint256, address owner, address) internal {
+    /**
+     * @notice Before request claim hook
+     * @param owner The owner address
+     */
+    function _beforeRequestClaim(uint256, /* amount */ address owner, address /* receiver */ ) internal {
         _checkIsClaimable();
 
         _updateReward(owner);
     }
 
+    /**
+     * @notice Request claim internal function
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     */
     function _requestClaim(
         uint256 amount,
         address owner,
@@ -365,6 +471,14 @@ contract Farm is IFarm, Initializable {
         return (amount, claimableTime, claimId);
     }
 
+    /**
+     * @notice Before execute claim hook
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     * @param claimableTime The claimable time
+     * @param claimId The claim ID
+     */
     function _beforeExecuteClaim(
         uint256 amount,
         address owner,
@@ -398,6 +512,14 @@ contract Farm is IFarm, Initializable {
         }
     }
 
+    /**
+     * @notice Execute claim internal function
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     * @param claimableTime The claimable time
+     * @param claimId The claim ID
+     */
     function _executeClaim(
         uint256 amount,
         address owner,
@@ -414,6 +536,14 @@ contract Farm is IFarm, Initializable {
         emit ClaimExecuted(claimId, amount, owner, receiver, claimableTime);
     }
 
+    /**
+     * @notice Before force execute claim hook
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     * @param claimableTime The claimable time
+     * @param claimId The claim ID
+     */
     function _beforeForceExecuteClaim(
         uint256 amount,
         address owner,
@@ -431,7 +561,22 @@ contract Farm is IFarm, Initializable {
         if (claimStatus != ClaimStatus.PENDING) revert InvalidStatusToInstantClaimPending(claimStatus);
     }
 
-    function _forceExecuteClaim(uint256 amount, address owner, address receiver, uint256, bytes32 claimId) internal {
+    /**
+     * @notice Force execute claim internal function
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     * @param claimId The claim ID
+     */
+    function _forceExecuteClaim(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256, /* claimableTime */
+        bytes32 claimId
+    )
+        internal
+    {
         _claimStatus[claimId] = ClaimStatus.CLAIMED;
 
         farmManager.mintRewardCallback(address(farmManager), amount);
@@ -439,13 +584,23 @@ contract Farm is IFarm, Initializable {
         emit ForceClaimExecuted(claimId, amount, owner, receiver);
     }
 
-    function _beforeInstantClaim(uint256, address owner, address) internal {
+    /**
+     * @notice Before instant claim hook
+     * @param owner The owner address
+     */
+    function _beforeInstantClaim(uint256, /* amount */ address owner, address /* receiver */ ) internal {
         _checkIsClaimable();
         _checkIsInstantClaimEnabled();
 
         _updateReward(owner);
     }
 
+    /**
+     * @notice Instant claim internal function
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     */
     function _instantClaim(uint256 amount, address owner, address receiver) internal returns (uint256) {
         uint256 pendingRewards = _pendingRewards[owner];
         if (pendingRewards == 0) revert ZeroPendingRewards();
@@ -464,6 +619,12 @@ contract Farm is IFarm, Initializable {
         return amount;
     }
 
+    /**
+     * @notice Update shares internal function
+     * @param amount The amount
+     * @param addr The address
+     * @param add Add or subtract shares
+     */
     function _updateShares(uint256 amount, address addr, bool add) internal {
         if (add) {
             _shares[addr] += amount;
@@ -474,6 +635,10 @@ contract Farm is IFarm, Initializable {
         }
     }
 
+    /**
+     * @notice Update reward internal function
+     * @param addr The address
+     */
     function _updateReward(address addr) internal {
         uint256 rewardPerToken = _calcRewardPerToken();
         _updateLastRewardPerToken(rewardPerToken);
@@ -481,6 +646,10 @@ contract Farm is IFarm, Initializable {
         _updateUserReward(addr, rewardPerToken, rewardAmount);
     }
 
+    /**
+     * @notice Calculate reward per token
+     * @return The reward per token
+     */
     function _calcRewardPerToken() internal view returns (uint256) {
         // calculate reward per token
         return FarmMath.computeLatestRewardPerToken(
@@ -493,28 +662,55 @@ contract Farm is IFarm, Initializable {
         );
     }
 
+    /**
+     * @notice Calculate user reward
+     * @param addr The address
+     * @param rewardPerToken The reward per token
+     * @return The reward amount
+     */
     function _calcUserReward(address addr, uint256 rewardPerToken) internal view returns (uint256) {
         // calculate reward amount
         return FarmMath.computeReward(farmConfig, _shares[addr], rewardPerToken, _lastUserRewardPerToken[addr]);
     }
 
+    /**
+     * @notice Update user reward internal function
+     * @param addr The address
+     * @param rewardPerToken The reward per token
+     * @param rewardAmount The reward amount
+     */
     function _updateUserReward(address addr, uint256 rewardPerToken, uint256 rewardAmount) internal {
         // update user reward state
         _updateLastUserRewardPerToken(addr, rewardPerToken);
         _updatePendingReward(addr, rewardAmount, true);
     }
 
+    /**
+     * @notice Update last reward per token internal function
+     * @param rewardPerToken The reward per token
+     */
     function _updateLastRewardPerToken(uint256 rewardPerToken) internal {
         _lastRewardPerToken = rewardPerToken;
         _lastUpdateTime = block.timestamp;
         emit LastRewardPerTokenUpdated(rewardPerToken, block.timestamp);
     }
 
+    /**
+     * @notice Update last user reward per token internal function
+     * @param addr The address
+     * @param rewardPerToken The reward per token
+     */
     function _updateLastUserRewardPerToken(address addr, uint256 rewardPerToken) internal {
         _lastUserRewardPerToken[addr] = rewardPerToken;
         emit UserRewardPerTokenUpdated(addr, rewardPerToken, block.timestamp);
     }
 
+    /**
+     * @notice Update pending reward internal function
+     * @param addr The address
+     * @param amount The amount
+     * @param add Add or subtract pending rewards
+     */
     function _updatePendingReward(address addr, uint256 amount, bool add) internal {
         if (add) {
             _pendingRewards[addr] += amount;
@@ -524,6 +720,14 @@ contract Farm is IFarm, Initializable {
         emit PendingRewardUpdated(addr, amount, add, block.timestamp);
     }
 
+    /**
+     * @notice Check input claim ID is valid
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     * @param claimableTime The claimable time
+     * @param claimId The claim ID
+     */
     function _checkClaimId(
         uint256 amount,
         address owner,
@@ -538,6 +742,14 @@ contract Farm is IFarm, Initializable {
         if (claimId != expectedClaimId) revert InvalidClaimId(claimId, expectedClaimId);
     }
 
+    /**
+     * @notice Calculate claim ID
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     * @param claimableTime The claimable time
+     * @return The claim ID
+     */
     function _calcClaimId(
         uint256 amount,
         address owner,
@@ -551,10 +763,18 @@ contract Farm is IFarm, Initializable {
         return keccak256(abi.encode(amount, owner, receiver, claimableTime));
     }
 
+    /**
+     * @notice Check address is not zero address
+     * @param addr The address
+     */
     function _checkIsNotZeroAddress(address addr) internal pure {
         if (addr == address(0)) revert InvalidZeroAddress();
     }
 
+    /**
+     * @notice Check farm config is valid
+     * @param _farmConfig The farm config
+     */
     function _checkFarmConfig(FarmConfig memory _farmConfig) internal pure {
         if (_farmConfig.rewardEndTime < _farmConfig.rewardStartTime) {
             revert InvalidConfigRewardTime(_farmConfig.rewardStartTime, _farmConfig.rewardEndTime);

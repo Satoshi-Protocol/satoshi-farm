@@ -29,11 +29,11 @@ abstract contract ArbSepTestnetConfig {
     });
 
     FarmConfig REWARD_FARM_CONFIG = FarmConfig({
-        depositCap: 10000000e18,
-        depositCapPerUser: 10000000e18,
+        depositCap: 10_000_000e18,
+        depositCapPerUser: 10_000_000e18,
         depositStartTime: 0,
         depositEndTime: type(uint256).max,
-        rewardRate: 10000e18,
+        rewardRate: 10_000e18,
         rewardStartTime: 0,
         rewardEndTime: type(uint256).max,
         claimStartTime: type(uint256).max,
@@ -66,11 +66,11 @@ abstract contract BaseSepTestnetConfig {
     });
 
     FarmConfig REWARD_FARM_CONFIG = FarmConfig({
-        depositCap: 10000000e18,
-        depositCapPerUser: 10000000e18,
+        depositCap: 10_000_000e18,
+        depositCapPerUser: 10_000_000e18,
         depositStartTime: 0,
         depositEndTime: type(uint256).max,
-        rewardRate: 10000e18,
+        rewardRate: 10_000e18,
         rewardStartTime: 0,
         rewardEndTime: type(uint256).max,
         claimStartTime: type(uint256).max,

@@ -52,15 +52,18 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         farmBeacon = new UpgradeableBeacon(address(farmImpl), owner);
 
         // deploy farm manager proxy
-        bytes memory data = abi.encodeCall(FarmManager.initialize, (farmBeacon, IRewardToken(REWARD_TOKEN_ADDRESS), DST_INFO, LZ_CONFIG, REWARD_FARM_CONFIG));
+        bytes memory data = abi.encodeCall(
+            FarmManager.initialize,
+            (farmBeacon, IRewardToken(REWARD_TOKEN_ADDRESS), DST_INFO, LZ_CONFIG, REWARD_FARM_CONFIG)
+        );
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
         ERC20Mock memeAsset = new ERC20Mock("ARB_MEME", "ARB_MEME");
-        memeAsset.mint(deployer, 10000000e18);
+        memeAsset.mint(deployer, 10_000_000e18);
         IFarm memeFarm = IFarm(address(farmManager.createFarm(memeAsset, REWARD_FARM_CONFIG)));
 
         memeAsset.approve(address(farmManager), type(uint256).max);
-        farmManager.depositERC20(DepositParams(memeFarm, 1000000e18, deployer));
+        farmManager.depositERC20(DepositParams(memeFarm, 1_000_000e18, deployer));
 
         vm.stopBroadcast();
         console.log("== Deployed contracts ==");
@@ -72,7 +75,7 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         console.log("== Meme contracts ==");
         console.log("memeAsset:", address(memeAsset));
         console.log("memeFarm:", address(memeFarm));
-        if(DST_INFO.dstEid == LZ_CONFIG.eid) {
+        if (DST_INFO.dstEid == LZ_CONFIG.eid) {
             (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32) = farmManager.dstInfo();
             console.log("== DstInfo ==");
             console.log("dstEid:", dstEid);

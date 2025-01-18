@@ -59,6 +59,10 @@ enum ClaimStatus {
     CLAIMED
 }
 
+/**
+ * @title IFarm interface
+ * @notice The Farm interface
+ */
 interface IFarm {
     error InvalidZeroAddress();
     error InvalidZeroAmount();
@@ -355,4 +359,11 @@ interface IFarm {
             uint256 claimDelayTime,
             bool instantClaimEnabled
         );
+
+    /**
+     * @notice whitelist config of the farm
+     * @return enabled True if the whitelist is enabled
+     * @return merkleRoot The merkle root for the
+     */
+    function whitelistConfig() external view returns (bool enabled, bytes32 merkleRoot);
 }

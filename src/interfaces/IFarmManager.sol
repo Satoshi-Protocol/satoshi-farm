@@ -4,10 +4,10 @@ pragma solidity >=0.8.0 <0.9.0;
 import { FarmConfig, IFarm, WhitelistConfig } from "./IFarm.sol";
 import { IRewardToken } from "./IRewardToken.sol";
 
+import { IOAppComposer } from "./layerzero/IOAppComposer.sol";
 import { MessagingFee, SendParam } from "./layerzero/IOFT.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
-import { IOAppComposer } from "./layerzero/IOAppComposer.sol";
 
 enum LZ_COMPOSE_OPT {
     NONE,
@@ -169,6 +169,10 @@ struct ClaimAndStakeCrossChainParams {
     bytes extraOptions;
 }
 
+/**
+ * @title IFarmManager interface
+ * @notice The interface for the farm manager
+ */
 interface IFarmManager is IOAppComposer {
     error InvalidFarm(IFarm farm);
     error InvalidAdmin(address expected, address actual);
@@ -238,11 +242,28 @@ interface IFarmManager is IOAppComposer {
         external;
 
     /**
+     * @notice Pause the farm manager
+     */
+    function pause() external;
+
+    /**
+     * @notice Resume the farm manager
+     */
+    function resume() external;
+
+    /**
      * @notice Update the farm configuration
      * @param farm The farm to update
      * @param farmConfig The farm configuration
      */
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external;
+
+    /**
+     * @notice Update the whitelist configuration
+     * @param farm The farm to update
+     * @param whitelistConfig The whitelist configuration
+     */
+    function updateWhitelistConfig(IFarm farm, WhitelistConfig memory whitelistConfig) external;
 
     /**
      * @notice Create a farm
@@ -434,6 +455,25 @@ interface IFarmManager is IOAppComposer {
      * @param amount The amount to transfer
      */
     function transferCallback(IERC20 token, address from, uint256 amount) external;
+
+    /**
+     * @notice Get the farm beacon
+     * @return farmBeacon The farm beacon
+     */
+    function farmBeacon() external view returns (IBeacon farmBeacon);
+
+    /**
+     * @notice Get the reward token
+     * @return rewardToken The reward token
+     */
+    function rewardToken() external view returns (IRewardToken rewardToken);
+
+    /**
+     * @notice farm is valid or not
+     * @param farm The farm to query
+     * @return isValidFarm The farm is valid or not
+     */
+    function validFarms(IFarm farm) external view returns (bool isValidFarm);
 
     /**
      * @notice Total shares of the farm
