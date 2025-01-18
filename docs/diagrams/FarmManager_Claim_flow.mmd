@@ -1,0 +1,38 @@
+sequenceDiagram
+    title Farm Manager Claim Flow
+    
+    actor User
+    participant FarmManager
+    participant Farm
+    participant RewardToken
+
+    %% Request Claim Flow
+    rect rgb(220, 220, 255)
+        Note over User,RewardToken: Request Claim Flow
+        User->>+FarmManager: requestClaim(amount, owner, receiver)
+        FarmManager->>+Farm: requestClaim(amount, owner, receiver)
+        Farm->>Farm: _beforeRequestClaim()
+        Farm->>Farm: _checkIsClaimable()
+        Farm->>Farm: _updateReward(owner)
+        Farm->>Farm: _updatePendingReward()
+        Farm->>Farm: calculate claimId & claimableTime
+        Farm->>Farm: _claimStatus[claimId] = PENDING
+        Farm-->>-FarmManager: return (amount, claimableTime, claimId)
+        FarmManager-->>-User: emit ClaimRequested(claimId, amount, owner, receiver, claimableTime)
+    end
+
+    %% Execute Claim Flow
+    rect rgb(255, 200, 200)
+        Note over User,RewardToken: Execute Claim Flow
+        User->>+FarmManager: executeClaim(amount, owner, receiver, claimableTime, claimId)
+        FarmManager->>+Farm: executeClaim(amount, owner, receiver, claimableTime, claimId)
+        Farm->>Farm: _beforeExecuteClaim()
+        Farm->>Farm: _checkIsClaimable()
+        Farm->>Farm: verify claimId & status
+        Farm->>Farm: verify claimableTime <= block.timestamp
+        Farm->>Farm: _claimStatus[claimId] = CLAIMED
+        Farm->>FarmManager: mintRewardCallback(receiver, amount)
+        FarmManager->>RewardToken: mint(receiver, amount)
+        Farm-->>-FarmManager: emit ClaimExecuted(claimId, amount, owner, receiver, claimableTime)
+        FarmManager-->>-User: return
+    end

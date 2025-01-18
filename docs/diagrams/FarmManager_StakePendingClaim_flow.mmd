@@ -1,0 +1,72 @@
+sequenceDiagram
+    title Farm Manager Stake Pending Claim Flow
+    
+    actor User
+    participant FarmManager
+    participant Farm
+    participant StakingFarm
+    participant RewardToken
+    participant LayerZero
+
+    %% Local Stake Pending Claim Flow
+    rect rgb(200, 200, 255)
+        Note over User,RewardToken: Local Stake Pending Claim Flow
+        User->>+FarmManager: stakePendingClaim(claimId, amount, owner, receiver, claimableTime)
+        
+        %% Check and Update Claim Status
+        FarmManager->>+Farm: getClaimStatus(claimId)
+        Farm-->>-FarmManager: return ClaimStatus
+        
+        FarmManager->>Farm: verify ClaimStatus == PENDING
+        FarmManager->>Farm: verify claimableTime <= block.timestamp
+        
+        %% Execute Claim to FarmManager
+        FarmManager->>+Farm: executeClaim(amount, owner, farmManager, claimableTime, claimId)
+        Farm->>Farm: _beforeExecuteClaim()
+        Farm->>Farm: _checkIsClaimable()
+        Farm->>Farm: verify claimId matches params
+        Farm->>Farm: _claimStatus[claimId] = CLAIMED
+        Farm->>FarmManager: mintRewardCallback(farmManager, amount)
+        FarmManager->>RewardToken: mint(farmManager, amount)
+        Farm-->>-FarmManager: emit ClaimExecuted(claimId, amount, owner, farmManager)
+        
+        %% Stake to StakingFarm
+        FarmManager->>+StakingFarm: depositERC20(amount, farmManager, receiver)
+        StakingFarm->>StakingFarm: _beforeDeposit()
+        StakingFarm->>StakingFarm: _updateReward(receiver)
+        RewardToken->>StakingFarm: transferFrom(farmManager, stakingFarm, amount)
+        StakingFarm->>StakingFarm: _updateShares()
+        StakingFarm-->>-FarmManager: emit Deposit(amount, farmManager, receiver)
+        
+        FarmManager-->>-User: return (claimedAmount, stakedAmount)
+    end
+
+    %% Cross Chain Stake Pending Claim Flow
+    rect rgb(220, 220, 255)
+        Note over User,LayerZero: Cross Chain Stake Pending Claim Flow
+        User->>+FarmManager: stakePendingClaimCrossChain(params, adapterParams)
+        
+        %% Check and Update Claim Status
+        FarmManager->>+Farm: getClaimStatus(params.claimId)
+        Farm-->>-FarmManager: return ClaimStatus
+        
+        FarmManager->>Farm: verify ClaimStatus == PENDING
+        FarmManager->>Farm: verify params.claimableTime <= block.timestamp
+        
+        %% Execute Claim to FarmManager
+        FarmManager->>+Farm: executeClaim(params.amount, params.owner, farmManager, params.claimableTime, params.claimId)
+        Farm->>Farm: _beforeExecuteClaim()
+        Farm->>Farm: _checkIsClaimable()
+        Farm->>Farm: verify claimId matches params
+        Farm->>Farm: _claimStatus[claimId] = CLAIMED
+        Farm->>FarmManager: mintRewardCallback(farmManager, amount)
+        FarmManager->>RewardToken: mint(farmManager, amount)
+        Farm-->>-FarmManager: emit ClaimExecuted(params.claimId, params.amount, params.owner, farmManager)
+        
+        %% Send Cross Chain Message
+        FarmManager->>RewardToken: approve(rewardToken, amount)
+        FarmManager->>RewardToken: sendAndCall(dstChainId, receiver, amount, payload, adapterParams)
+        RewardToken->>LayerZero: send cross chain message
+        
+        FarmManager-->>-User: return (claimedAmount)
+    end 

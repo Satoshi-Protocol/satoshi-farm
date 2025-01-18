@@ -1,0 +1,30 @@
+sequenceDiagram
+    title Farm Manager Claim And Stake Flow
+    
+    actor User
+    participant FarmManager
+    participant Farm
+    participant StakingFarm
+    participant RewardToken
+
+    %% Claim And Stake Flow
+    rect rgb(220, 220, 255)
+        Note over User,RewardToken: Delayed Claim And Stake Flow
+        User->>+FarmManager: claimAndStake(claimId, amount, owner, receiver, claimableTime)
+        FarmManager->>+Farm: instantClaim(amount, owner, farmManager, claimableTime, claimId)
+        Farm->>Farm: _beforeInstantClaim()
+        Farm->>Farm: _updateReward(owner)
+        Farm->>Farm: _updatePendingReward()
+        Farm->>FarmManager: mintRewardCallback(farmManager, amount)
+        FarmManager->>RewardToken: mint(farmManager, amount)
+        Farm-->>-FarmManager: emit InstantClaimed(amount, owner, farmManager)
+        
+        FarmManager->>+StakingFarm: depositERC20(amount, farmManager, receiver)
+        StakingFarm->>StakingFarm: _beforeDeposit()
+        StakingFarm->>StakingFarm: _updateReward(receiver)
+        RewardToken->>StakingFarm: transferFrom(farmManager, stakingFarm, amount)
+        StakingFarm->>StakingFarm: _updateShares()
+        StakingFarm-->>-FarmManager: emit Deposit(amount, farmManager, receiver)
+        
+        FarmManager-->>-User: return (claimedAmount, stakedAmount)
+    end 
