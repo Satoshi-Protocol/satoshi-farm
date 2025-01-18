@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.20;
 
 import { FarmConfig } from "../../src/interfaces/IFarm.sol";
 import { Test } from "forge-std/Test.sol";

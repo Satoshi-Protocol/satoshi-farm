@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.20;
 
 import { IFarm } from "../src/interfaces/IFarm.sol";
 import { IFarmManager } from "../src/interfaces/IFarmManager.sol";
