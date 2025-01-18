@@ -82,10 +82,10 @@ contract Farm is IFarm, Initializable {
     }
 
     /**
-     * @notice modifier for only whitelist enabled
+     * @notice modifier for only withdraw enabled
      */
-    modifier onlyWhitelistEnabled() {
-        if (!whitelistConfig.enabled) revert WhitelistNotEnabled();
+    modifier onlyWithdrawEnabled() {
+        if (!farmConfig.withdrawEnabled) revert WithdrawNotEnabled();
         _;
     }
 
@@ -188,7 +188,7 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
-    function withdraw(uint256 amount, address owner, address receiver) external onlyFarmManager onlyWhitelistEnabled {
+    function withdraw(uint256 amount, address owner, address receiver) external onlyFarmManager onlyWithdrawEnabled {
         _beforeWithdraw(amount, owner, receiver);
 
         _withdraw(amount, owner, receiver);

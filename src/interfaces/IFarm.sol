@@ -94,6 +94,7 @@ interface IFarm {
     error InvalidConfigClaimTime(uint256 claimStartTime, uint256 claimEndTime);
     error InvalidConfigDepositCap(uint256 depositCap, uint256 depositCapPerUser);
     error InstantClaimNotEnabled();
+    error WithdrawNotEnabled();
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
