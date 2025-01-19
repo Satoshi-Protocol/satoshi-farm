@@ -11,13 +11,13 @@ abstract contract TestConfig {
     FarmConfig internal DEFAULT_REWARD_FARM_CONFIG = FarmConfig({
         depositCap: 0,
         depositCapPerUser: 0,
-        depositStartTime: 0,
-        depositEndTime: type(uint256).max,
         rewardRate: 1000,
-        rewardStartTime: 0,
-        rewardEndTime: type(uint256).max,
-        claimStartTime: type(uint256).max,
-        claimEndTime: type(uint256).max,
+        depositStartTime: 0,
+        depositEndTime: type(uint32).max,
+        rewardStartTime: 0, //TODO: cannot be 0
+        rewardEndTime: type(uint32).max,
+        claimStartTime: type(uint32).max,
+        claimEndTime: type(uint32).max,
         claimDelayTime: 0,
         withdrawEnabled: false,
         instantClaimEnabled: false

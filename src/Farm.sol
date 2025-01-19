@@ -110,6 +110,12 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
+    function updateRewardRate(uint256 _rewardRate) external onlyFarmManager {
+        farmConfig.rewardRate = _rewardRate;
+        emit FarmConfigUpdated(farmConfig);
+    }
+
+    /// @inheritdoc IFarm
     function updateFarmConfig(FarmConfig memory _farmConfig) external onlyFarmManager {
         _checkFarmConfig(_farmConfig);
         _updateLastRewardPerToken(_calcRewardPerToken());

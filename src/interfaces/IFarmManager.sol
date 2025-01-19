@@ -188,6 +188,7 @@ interface IFarmManager is IOAppComposer {
     error DstEidIsNotCurrentChain(uint32 dstEid, uint32 currentEid);
     error DstEidIsCurrentChain(uint32 dstEid, uint32 currentEid);
 
+    event RewardRateUpdated(IFarm farm, uint256 rewardRate);
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
     event WhitelistConfigUpdated(IFarm farm, WhitelistConfig whitelistConfig);
     event LzConfigUpdated(LzConfig lzConfig);
@@ -250,6 +251,13 @@ interface IFarmManager is IOAppComposer {
      * @notice Resume the farm manager
      */
     function resume() external;
+
+    /**
+     * @notice Update the reward rate
+     * @param farm The farm to update
+     * @param rewardRate The new reward rate
+     */
+    function updateRewardRate(IFarm farm, uint256 rewardRate) external;
 
     /**
      * @notice Update the farm configuration

@@ -158,6 +158,12 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    function updateRewardRate(IFarm farm, uint256 rewardRate) external onlyOwner {
+        farm.updateRewardRate(rewardRate);
+        emit RewardRateUpdated(farm, rewardRate);
+    }
+
+    /// @inheritdoc IFarmManager
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external onlyOwner {
         farm.updateFarmConfig(farmConfig);
         emit FarmConfigUpdated(farm, farmConfig);
@@ -602,14 +608,14 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         (
             uint256 depositCap,
             uint256 depositCapPerUser,
-            uint256 depositStartTime,
-            uint256 depositEndTime,
             uint256 rewardRate,
-            uint256 rewardStartTime,
-            uint256 rewardEndTime,
-            uint256 claimStartTime,
-            uint256 claimEndTime,
-            uint256 claimDelayTime,
+            uint32 depositStartTime,
+            uint32 depositEndTime,
+            uint32 rewardStartTime,
+            uint32 rewardEndTime,
+            uint32 claimStartTime,
+            uint32 claimEndTime,
+            uint32 claimDelayTime,
             bool withdrawEnabled,
             bool instantClaimEnabled
         ) = farm.farmConfig();
@@ -617,9 +623,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         return FarmConfig(
             depositCap,
             depositCapPerUser,
+            rewardRate,
             depositStartTime,
             depositEndTime,
-            rewardRate,
             rewardStartTime,
             rewardEndTime,
             claimStartTime,

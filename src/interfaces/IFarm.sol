@@ -13,9 +13,9 @@ address constant DEFAULT_NATIVE_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEe
  * @notice The farm configuration
  * @param depositCap deposit cap for the farm
  * @param depositCapPerUser deposit cap per user
+ * @param rewardRate reward rate per second
  * @param depositStartTime deposit start time
  * @param depositEndTime deposit end time
- * @param rewardRate reward rate per second
  * @param rewardStartTime reward start time
  * @param rewardEndTime reward end time
  * @param claimStartTime claim start time
@@ -27,14 +27,14 @@ address constant DEFAULT_NATIVE_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEe
 struct FarmConfig {
     uint256 depositCap;
     uint256 depositCapPerUser;
-    uint256 depositStartTime;
-    uint256 depositEndTime;
     uint256 rewardRate;
-    uint256 rewardStartTime;
-    uint256 rewardEndTime;
-    uint256 claimStartTime;
-    uint256 claimEndTime;
-    uint256 claimDelayTime;
+    uint32 depositStartTime;
+    uint32 depositEndTime;
+    uint32 rewardStartTime;
+    uint32 rewardEndTime;
+    uint32 claimStartTime;
+    uint32 claimEndTime;
+    uint32 claimDelayTime;
     bool withdrawEnabled;
     bool instantClaimEnabled;
 }
@@ -119,6 +119,12 @@ interface IFarm {
      * @param farmConfig The farm configuration
      */
     function initialize(address underlyingAsset, address farmManager, FarmConfig memory farmConfig) external;
+
+    /**
+     * @notice Update the reward rate
+     * @param _rewardRate The new reward rate
+     */
+    function updateRewardRate(uint256 _rewardRate) external;
 
     /**
      * @notice Update the farm configuration
@@ -336,9 +342,9 @@ interface IFarm {
      * @notice farm config of the farm
      * @return depositCap The deposit cap
      * @return depositCapPerUser The deposit cap per user
+     * @return rewardRate The reward rate
      * @return depositStartTime The deposit start time
      * @return depositEndTime The deposit end time
-     * @return rewardRate The reward rate
      * @return rewardStartTime The reward start time
      * @return rewardEndTime The reward end time
      * @return claimStartTime The claim start time
@@ -353,14 +359,14 @@ interface IFarm {
         returns (
             uint256 depositCap,
             uint256 depositCapPerUser,
-            uint256 depositStartTime,
-            uint256 depositEndTime,
             uint256 rewardRate,
-            uint256 rewardStartTime,
-            uint256 rewardEndTime,
-            uint256 claimStartTime,
-            uint256 claimEndTime,
-            uint256 claimDelayTime,
+            uint32 depositStartTime,
+            uint32 depositEndTime,
+            uint32 rewardStartTime,
+            uint32 rewardEndTime,
+            uint32 claimStartTime,
+            uint32 claimEndTime,
+            uint32 claimDelayTime,
             bool withdrawEnabled,
             bool instantClaimEnabled
         );
