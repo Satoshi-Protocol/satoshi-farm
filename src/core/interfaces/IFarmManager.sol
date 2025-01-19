@@ -252,6 +252,8 @@ interface IFarmManager is IOAppComposer {
      */
     function resume() external;
 
+    function paused() external view returns (bool);
+
     /**
      * @notice Update the reward rate
      * @param farm The farm to update

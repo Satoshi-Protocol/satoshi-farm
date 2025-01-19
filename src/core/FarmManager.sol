@@ -141,6 +141,10 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         _unpause();
     }
 
+    function paused() public view override(PausableUpgradeable, IFarmManager) returns (bool) {
+        return super.paused();
+    }
+
     /// @inheritdoc IFarmManager
     function updateLzConfig(LzConfig memory _lzConfig) external onlyOwner {
         lzConfig = _lzConfig;

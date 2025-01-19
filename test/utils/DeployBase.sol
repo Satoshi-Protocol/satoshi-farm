@@ -13,6 +13,8 @@ import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import { StdCheats } from "forge-std/StdCheats.sol";
 import { Test } from "forge-std/Test.sol";
 import { MockERC20 } from "solmate/test/utils/mocks/MockERC20.sol";
 
@@ -42,6 +44,16 @@ abstract contract DeployBase is Test, TestConfig {
         vm.stopPrank();
     }
 
+    function _deployMockUnderlyingAsset(address deployer) internal returns (IERC20) {
+        vm.startPrank(deployer);
+
+        IERC20 underlyingAsset = IERC20(address(new MockERC20("Mock Underlying Asset", "MUA", 18)));
+
+        vm.stopPrank();
+
+        return underlyingAsset;
+    }
+
     function _deployImplementation(address deployer) internal {
         vm.startPrank(deployer);
 
@@ -69,12 +81,15 @@ abstract contract DeployBase is Test, TestConfig {
 
         assert(address(rewardToken) != address(0));
         assert(address(farmBeacon) != address(0));
-        DstInfo memory dstInfo;
-        LzConfig memory lzConfig;
-        FarmConfig memory farmConfig;
+        DstInfo memory dstInfo = DEFAULT_DST_INFO;
+        LzConfig memory lzConfig = DEFAULT_LZ_CONFIG;
+        FarmConfig memory farmConfig = DEFAULT_REWARD_FARM_CONFIG;
         bytes memory data =
             abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardToken, dstInfo, lzConfig, farmConfig));
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
+
+        (, IFarm dstRewardFarm,) = farmManager.dstInfo();
+        rewardFarm = dstRewardFarm;
 
         vm.stopPrank();
     }
@@ -96,5 +111,17 @@ abstract contract DeployBase is Test, TestConfig {
         vm.stopPrank();
 
         return farm;
+    }
+
+    /// @dev Generates a user, labels its address, and funds it with test assets.
+    function _createUser(string memory name_) internal returns (address payable user_) {
+        StdCheats.Account memory account_ = _createAccount(name_);
+        user_ = payable(account_.addr);
+    }
+
+    /// @dev Generates a user with private key, labels its address, and funds it with test assets.
+    function _createAccount(string memory name_) internal returns (StdCheats.Account memory account_) {
+        account_ = makeAccount(name_);
+        vm.deal({ account: account_.addr, newBalance: 100 ether });
     }
 }
