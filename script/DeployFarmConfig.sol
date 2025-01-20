@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { FarmConfig } from "../src/interfaces/IFarm.sol";
+import { FarmConfig } from "../src/core/interfaces/IFarm.sol";
 
 address constant FARM_MANAGER_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 address constant UNDERLYING_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;

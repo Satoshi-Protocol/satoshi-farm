@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Farm } from "../src/Farm.sol";
+import { Farm } from "../src/core/Farm.sol";
 
-import { FarmManager } from "../src/FarmManager.sol";
-import { FarmConfig, IFarm } from "../src/interfaces/IFarm.sol";
-import { DstInfo, IFarmManager, LzConfig } from "../src/interfaces/IFarmManager.sol";
-import { IRewardToken } from "../src/interfaces/IRewardToken.sol";
+import { FarmManager } from "../src/core/FarmManager.sol";
+import { FarmConfig, IFarm } from "../src/core/interfaces/IFarm.sol";
+import { DstInfo, IFarmManager, LzConfig } from "../src/core/interfaces/IFarmManager.sol";
+import { IRewardToken } from "../src/core/interfaces/IRewardToken.sol";
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

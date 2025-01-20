@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { IFarm } from "../src/interfaces/IFarm.sol";
-import { IFarmManager } from "../src/interfaces/IFarmManager.sol";
+import { IFarm } from "../src/core/interfaces/IFarm.sol";
+import { IFarmManager } from "../src/core/interfaces/IFarmManager.sol";
 
 import { Script, console } from "forge-std/Script.sol";
 

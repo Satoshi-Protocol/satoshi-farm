@@ -4,8 +4,8 @@ pragma solidity ^0.8.20;
 import { FarmConfig, IFarm, WhitelistConfig } from "./IFarm.sol";
 import { IRewardToken } from "./IRewardToken.sol";
 
-import { IOAppComposer } from "./layerzero/IOAppComposer.sol";
-import { MessagingFee, SendParam } from "./layerzero/IOFT.sol";
+import { IOAppComposer } from "../../layerzero/IOAppComposer.sol";
+import { MessagingFee, SendParam } from "../../layerzero/IOFT.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
