@@ -1,0 +1,35 @@
+sequenceDiagram
+    title Farm Manager Withdraw Flow
+    
+    actor User
+    participant FarmManager
+    participant Farm
+    participant Token
+
+    %% Standard ERC20 Withdraw
+    rect rgb(200, 200, 255)
+        Note over User,Token: ERC20 Withdraw Flow
+        User->>+FarmManager: withdraw(amount, owner, receiver)
+        FarmManager->>+Farm: withdraw(amount, owner, receiver)
+        Farm->>Farm: _beforeWithdraw()
+        Farm->>Farm: verify amount <= shares[owner]
+        Farm->>Farm: _updateReward(owner)
+        Farm->>Farm: _updateShares(amount, owner, false)
+        Farm->>Token: transfer(receiver, amount)
+        Farm-->>-FarmManager: emit Withdraw(amount, owner, receiver)
+        FarmManager-->>-User: return
+    end
+
+    %% Native Token Withdraw
+    rect rgb(220, 220, 255)
+        Note over User,Token: Native Token Withdraw Flow
+        User->>+FarmManager: withdraw(amount, owner, receiver)
+        FarmManager->>+Farm: withdraw(amount, owner, receiver)
+        Farm->>Farm: _beforeWithdraw()
+        Farm->>Farm: verify amount <= shares[owner]
+        Farm->>Farm: _updateReward(owner)
+        Farm->>Farm: _updateShares(amount, owner, false)
+        Farm-->>receiver: transfer ETH (call{value: amount}(""))
+        Farm-->>-FarmManager: emit Withdraw(amount, owner, receiver)
+        FarmManager-->>-User: return
+    end

@@ -1,0 +1,63 @@
+sequenceDiagram
+    title Farm Manager Deposit Flow
+    
+    actor User
+    participant FarmManager
+    participant Farm
+    participant ERC20Token
+
+    %% Standard ERC20 Deposit
+    rect rgb(200, 200, 255)
+        Note over User,ERC20Token: Standard ERC20 Deposit
+        User->>+FarmManager: depositERC20(DepositParams)
+        FarmManager->>+Farm: depositERC20(amount, depositor, receiver)
+        Farm->>Farm: _beforeDeposit()
+        Farm->>Farm: _checkIsDepositEnabled()
+        Farm->>Farm: _updateReward(receiver)
+        ERC20Token->>Farm: transferFrom(depositor, farm, amount)
+        Farm->>Farm: _updateShares()
+        Farm-->>-FarmManager: emit Deposit(amount, depositor, receiver)
+        FarmManager-->>-User: return
+    end
+
+    %% Whitelisted ERC20 Deposit
+    rect rgb(220, 220, 255)
+        Note over User,ERC20Token: Whitelisted ERC20 Deposit
+        User->>+FarmManager: depositERC20WithProof(DepositParams, merkleProof[])
+        FarmManager->>+Farm: depositERC20WithProof(amount, depositor, receiver, merkleProof[])
+        Farm->>Farm: verify merkleProof
+        Farm->>Farm: _beforeDeposit()
+        Farm->>Farm: _checkIsDepositEnabled()
+        Farm->>Farm: _updateReward(receiver)
+        ERC20Token->>Farm: transferFrom(depositor, farm, amount)
+        Farm->>Farm: _updateShares()
+        Farm-->>-FarmManager: emit Deposit(amount, depositor, receiver)
+        FarmManager-->>-User: return
+    end
+
+    %% Standard Native Token Deposit
+    rect rgb(255, 200, 200)
+        Note over User,Farm: Standard Native Token Deposit
+        User->>+FarmManager: depositNativeAsset{value: amount}(DepositParams)
+        FarmManager->>+Farm: depositNativeAsset{value: amount}()
+        Farm->>Farm: _beforeDeposit()
+        Farm->>Farm: verify msg.value == amount
+        Farm->>Farm: _updateReward(receiver)
+        Farm->>Farm: _updateShares()
+        Farm-->>-FarmManager: emit Deposit(amount, depositor, receiver)
+        FarmManager-->>-User: return
+    end
+
+    %% Whitelisted Native Token Deposit
+    rect rgb(255, 220, 220)
+        Note over User,Farm: Whitelisted Native Token Deposit
+        User->>+FarmManager: depositNativeAssetWithProof{value: amount}(DepositParams, merkleProof[])
+        FarmManager->>+Farm: depositNativeAssetWithProof{value: amount}()
+        Farm->>Farm: verify merkleProof
+        Farm->>Farm: _beforeDeposit()
+        Farm->>Farm: verify msg.value == amount
+        Farm->>Farm: _updateReward(receiver)
+        Farm->>Farm: _updateShares()
+        Farm-->>-FarmManager: emit Deposit(amount, depositor, receiver)
+        FarmManager-->>-User: return
+    end
