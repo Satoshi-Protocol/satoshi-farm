@@ -252,8 +252,6 @@ interface IFarmManager is IOAppComposer {
      */
     function resume() external;
 
-    function paused() external view returns (bool);
-
     /**
      * @notice Update the reward rate
      * @param farm The farm to update
@@ -465,6 +463,12 @@ interface IFarmManager is IOAppComposer {
      * @param amount The amount to transfer
      */
     function transferCallback(IERC20 token, address from, uint256 amount) external;
+
+    /**
+     * @notice Get the paused status
+     * @return paused The paused status
+     */
+    function paused() external view returns (bool);
 
     /**
      * @notice Get the farm beacon

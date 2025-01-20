@@ -141,10 +141,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         _unpause();
     }
 
-    function paused() public view override(PausableUpgradeable, IFarmManager) returns (bool) {
-        return super.paused();
-    }
-
     /// @inheritdoc IFarmManager
     function updateLzConfig(LzConfig memory _lzConfig) external onlyOwner {
         lzConfig = _lzConfig;
@@ -551,6 +547,11 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     // --- external view functions ---
+
+    /// @inheritdoc IFarmManager
+    function paused() public view override(PausableUpgradeable, IFarmManager) returns (bool) {
+        return super.paused();
+    }
 
     /// @inheritdoc IFarmManager
     function totalShares(IFarm farm) external view returns (uint256) {
