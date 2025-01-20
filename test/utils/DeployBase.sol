@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.20;
 
-import { Farm } from "../../src/Farm.sol";
+import { Farm } from "../../src/core/Farm.sol";
 
-import { FarmManager } from "../../src/FarmManager.sol";
-import { FarmConfig, IFarm } from "../../src/interfaces/IFarm.sol";
-import { IFarmManager } from "../../src/interfaces/IFarmManager.sol";
-import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
+import { FarmManager } from "../../src/core/FarmManager.sol";
+import { FarmConfig, IFarm } from "../../src/core/interfaces/IFarm.sol";
+import { DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
+import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
 
 import { DEPLOYER, OWNER, TestConfig } from "./TestConfig.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import { StdCheats } from "forge-std/StdCheats.sol";
 import { Test } from "forge-std/Test.sol";
 import { MockERC20 } from "solmate/test/utils/mocks/MockERC20.sol";
 
@@ -32,7 +34,6 @@ abstract contract DeployBase is Test, TestConfig {
         _deployImplementation(DEPLOYER);
         _deployFarmBeacon(DEPLOYER, OWNER);
         _deployFarmManager(DEPLOYER);
-        _createRewardFarm(DEPLOYER, rewardToken, DEFAULT_REWARD_FARM_CONFIG);
     }
 
     function _deployMockRewardToken(address deployer) internal {
@@ -41,6 +42,16 @@ abstract contract DeployBase is Test, TestConfig {
         rewardToken = IRewardToken(address(new MockERC20("Mock Reward Token", "MRT", 18)));
 
         vm.stopPrank();
+    }
+
+    function _deployMockUnderlyingAsset(address deployer) internal returns (IERC20) {
+        vm.startPrank(deployer);
+
+        IERC20 underlyingAsset = IERC20(address(new MockERC20("Mock Underlying Asset", "MUA", 18)));
+
+        vm.stopPrank();
+
+        return underlyingAsset;
     }
 
     function _deployImplementation(address deployer) internal {
@@ -70,8 +81,15 @@ abstract contract DeployBase is Test, TestConfig {
 
         assert(address(rewardToken) != address(0));
         assert(address(farmBeacon) != address(0));
-        bytes memory data = abi.encodeCall(FarmManager.initialize, (rewardToken, farmBeacon));
+        DstInfo memory dstInfo = DEFAULT_DST_INFO;
+        LzConfig memory lzConfig = DEFAULT_LZ_CONFIG;
+        FarmConfig memory farmConfig = DEFAULT_REWARD_FARM_CONFIG;
+        bytes memory data =
+            abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardToken, dstInfo, lzConfig, farmConfig));
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
+
+        (, IFarm dstRewardFarm,) = farmManager.dstInfo();
+        rewardFarm = dstRewardFarm;
 
         vm.stopPrank();
     }
@@ -87,30 +105,23 @@ abstract contract DeployBase is Test, TestConfig {
         vm.startPrank(deployer);
 
         assert(address(underlyingAsset) != address(0));
-        assert(address(rewardFarm) != address(0));
-        IFarm farm = IFarm(address(farmManager.createFarm(underlyingAsset, rewardFarm, farmConfig)));
+        // assert(address(rewardFarm) != address(0));
+        IFarm farm = IFarm(address(farmManager.createFarm(underlyingAsset, farmConfig)));
 
         vm.stopPrank();
 
         return farm;
     }
 
-    function _createRewardFarm(
-        address deployer,
-        IERC20 underlyingAsset,
-        FarmConfig memory farmConfig
-    )
-        internal
-        returns (IFarm)
-    {
-        vm.startPrank(deployer);
+    /// @dev Generates a user, labels its address, and funds it with test assets.
+    function _createUser(string memory name_) internal returns (address payable user_) {
+        StdCheats.Account memory account_ = _createAccount(name_);
+        user_ = payable(account_.addr);
+    }
 
-        assert(address(underlyingAsset) != address(0));
-        // input address(0) as rewardFarm when creating rewardFarm
-        rewardFarm = IFarm(address(farmManager.createFarm(underlyingAsset, IFarm(address(0)), farmConfig)));
-
-        vm.stopPrank();
-
-        return rewardFarm;
+    /// @dev Generates a user with private key, labels its address, and funds it with test assets.
+    function _createAccount(string memory name_) internal returns (StdCheats.Account memory account_) {
+        account_ = makeAccount(name_);
+        vm.deal({ account: account_.addr, newBalance: 100 ether });
     }
 }

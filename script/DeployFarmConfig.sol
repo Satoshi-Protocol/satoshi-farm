@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.20;
 
-import { FarmConfig } from "../src/interfaces/IFarm.sol";
+import { FarmConfig } from "../src/core/interfaces/IFarm.sol";
 
 address constant FARM_MANAGER_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 address constant UNDERLYING_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -12,13 +12,14 @@ abstract contract DeployFarmConfig {
         depositCap: 0,
         depositCapPerUser: 0,
         depositStartTime: 0,
-        depositEndTime: type(uint256).max,
+        depositEndTime: type(uint32).max,
         rewardRate: 1000,
         rewardStartTime: 0,
-        rewardEndTime: type(uint256).max,
-        claimStartTime: type(uint256).max,
-        claimEndTime: type(uint256).max,
+        rewardEndTime: type(uint32).max,
+        claimStartTime: type(uint32).max,
+        claimEndTime: type(uint32).max,
         claimDelayTime: 0,
-        claimAndStakeEnabled: false
+        withdrawEnabled: true,
+        instantClaimEnabled: false
     });
 }

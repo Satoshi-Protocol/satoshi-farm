@@ -1,5 +1,5 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity >=0.8.0 <0.9.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
 // import { FarmingVaultConfig, IFarmingVault } from "../src/interfaces/IFarmingVault.sol";
 // import { IFarmingVaultManager } from "../src/interfaces/IFarmingVaultManager.sol";

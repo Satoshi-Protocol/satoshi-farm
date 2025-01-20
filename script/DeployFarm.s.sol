@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.20;
 
-import { IFarm } from "../src/interfaces/IFarm.sol";
-import { IFarmManager } from "../src/interfaces/IFarmManager.sol";
+import { IFarm } from "../src/core/interfaces/IFarm.sol";
+import { IFarmManager } from "../src/core/interfaces/IFarmManager.sol";
 
 import { Script, console } from "forge-std/Script.sol";
 
@@ -32,7 +32,7 @@ contract DeploySetupScript is Script, DeployFarmConfig {
         vm.startBroadcast(OWNER_PRIVATE_KEY);
 
         // deploy farm
-        IFarm farm = IFarm(address(farmManager.createFarm(underlyingAsset, rewardFarm, FARM_CONFIG)));
+        IFarm farm = IFarm(address(farmManager.createFarm(underlyingAsset, FARM_CONFIG)));
 
         vm.stopBroadcast();
 
