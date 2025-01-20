@@ -233,7 +233,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit Deposit(farm, amount, msg.sender, receiver);
     }
 
-
     /// @inheritdoc IFarmManager
     function depositERC20(DepositParams memory depositParams) public whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
