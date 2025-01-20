@@ -29,7 +29,7 @@ library FarmMath {
         view
         returns (uint256)
     {
-        if (farmConfig.rewardStartTime == 0 || farmConfig.rewardEndTime == 0 || farmConfig.rewardRate == 0) {
+        if (farmConfig.rewardStartTime == 0 || farmConfig.rewardEndTime == 0) {
             return 0;
         }
         if (block.timestamp < farmConfig.rewardStartTime) {
