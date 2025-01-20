@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { IFarm } from "../src/interfaces/IFarm.sol";
-import { DstInfo, IFarmManager, LzConfig, WhitelistConfig } from "../src/interfaces/IFarmManager.sol";
+import { IFarm } from "../src/core/interfaces/IFarm.sol";
+import { DstInfo, IFarmManager, LzConfig, WhitelistConfig } from "../src/core/interfaces/IFarmManager.sol";
 import { BaseTest } from "./utils/BaseTest.sol";
 import { DeployBase } from "./utils/DeployBase.sol";
 import { DEPLOYER, OWNER, TestConfig } from "./utils/TestConfig.sol";

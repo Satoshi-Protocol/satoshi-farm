@@ -6,7 +6,7 @@ import { DeployBase } from "./utils/DeployBase.sol";
 import { DEPLOYER, OWNER } from "./utils/TestConfig.sol";
 import { Test, console } from "forge-std/Test.sol";
 
-import { IFarm } from "../src/interfaces/IFarm.sol";
+import { IFarm } from "../src/core/interfaces/IFarm.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IOwnable {

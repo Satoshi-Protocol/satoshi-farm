@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { FarmConfig } from "../../src/interfaces/IFarm.sol";
-import { DEFAULT_NATIVE_ASSET_ADDRESS, IFarm } from "../../src/interfaces/IFarm.sol";
+import { FarmConfig } from "../../src/core/interfaces/IFarm.sol";
+import { DEFAULT_NATIVE_ASSET_ADDRESS, IFarm } from "../../src/core/interfaces/IFarm.sol";
 import {
     ClaimAndStakeParams,
     DepositParams,
@@ -11,10 +11,10 @@ import {
     RequestClaimParams,
     StakePendingClaimParams,
     WithdrawParams
-} from "../../src/interfaces/IFarmManager.sol";
+} from "../../src/core/interfaces/IFarmManager.sol";
 import { DeployBase } from "./DeployBase.sol";
 
-import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
+import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { Test } from "forge-std/Test.sol";
 import "forge-std/console2.sol";
