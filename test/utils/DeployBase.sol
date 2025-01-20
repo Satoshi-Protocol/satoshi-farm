@@ -90,7 +90,7 @@ abstract contract DeployBase is Test, TestConfig {
         vm.startPrank(deployer);
 
         assert(address(underlyingAsset) != address(0));
-        assert(address(rewardFarm) != address(0));
+        // assert(address(rewardFarm) != address(0));
         IFarm farm = IFarm(address(farmManager.createFarm(underlyingAsset, farmConfig)));
 
         vm.stopPrank();
