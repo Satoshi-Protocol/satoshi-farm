@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { FarmConfig } from "../../src/interfaces/IFarm.sol";
+import { FarmConfig } from "../../src/core/interfaces/IFarm.sol";
 
-import { IFarm } from "../../src/interfaces/IFarm.sol";
-import { DstInfo, LzConfig } from "../../src/interfaces/IFarmManager.sol";
+import { IFarm } from "../../src/core/interfaces/IFarm.sol";
+import { DstInfo, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
 import { Test } from "forge-std/Test.sol";
 
 address constant DEPLOYER = 0x1234567890123456789012345678901234567890;

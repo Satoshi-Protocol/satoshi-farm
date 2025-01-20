@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { FarmConfig, IFarm } from "../../src/interfaces/IFarm.sol";
+import { FarmConfig, IFarm } from "../../src/core/interfaces/IFarm.sol";
 
-import { DstInfo, IFarmManager, LzConfig } from "../../src/interfaces/IFarmManager.sol";
-import { IRewardToken } from "../../src/interfaces/IRewardToken.sol";
+import { DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
+import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
 
 abstract contract ArbSepTestnetConfig {
     bool constant IS_DEPLOY_MEME_FARM = true;

@@ -21,8 +21,8 @@ import {
 } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
 
-import { MessagingFee, SendParam } from "./interfaces/layerzero/IOFT.sol";
-import { OFTComposeMsgCodec } from "./interfaces/layerzero/OFTComposeMsgCodec.sol";
+import { MessagingFee, SendParam } from "../layerzero/IOFT.sol";
+import { OFTComposeMsgCodec } from "../layerzero/OFTComposeMsgCodec.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
