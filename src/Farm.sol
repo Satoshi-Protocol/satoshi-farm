@@ -111,6 +111,7 @@ contract Farm is IFarm, Initializable {
 
     /// @inheritdoc IFarm
     function updateRewardRate(uint256 _rewardRate) external onlyFarmManager {
+        _updateLastRewardPerToken(_calcRewardPerToken());
         farmConfig.rewardRate = _rewardRate;
         emit FarmConfigUpdated(farmConfig);
     }
@@ -665,15 +666,19 @@ contract Farm is IFarm, Initializable {
      * @return The reward per token
      */
     function _calcRewardPerToken() internal view returns (uint256) {
-        // calculate reward per token
-        return FarmMath.computeLatestRewardPerToken(
-            _lastRewardPerToken,
-            farmConfig.rewardRate,
-            FarmMath.computeInterval(
-                block.timestamp, _lastUpdateTime, farmConfig.rewardStartTime, farmConfig.rewardEndTime
-            ),
-            _totalShares
-        );
+        if (_lastUpdateTime == 0) {
+            return 0;
+        } else {
+            // calculate reward per token
+            return FarmMath.computeLatestRewardPerToken(
+                _lastRewardPerToken,
+                farmConfig.rewardRate,
+                FarmMath.computeInterval(
+                    block.timestamp, _lastUpdateTime, farmConfig.rewardStartTime, farmConfig.rewardEndTime
+                ),
+                _totalShares
+            );
+        }
     }
 
     /**
@@ -704,6 +709,7 @@ contract Farm is IFarm, Initializable {
      * @param rewardPerToken The reward per token
      */
     function _updateLastRewardPerToken(uint256 rewardPerToken) internal {
+        require(_lastUpdateTime <= block.timestamp, "Farm: invalid last update time");
         _lastRewardPerToken = rewardPerToken;
         _lastUpdateTime = block.timestamp;
         emit LastRewardPerTokenUpdated(rewardPerToken, block.timestamp);
