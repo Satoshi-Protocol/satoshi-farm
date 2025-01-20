@@ -107,6 +107,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         __Pausable_init();
         __UUPSUpgradeable_init();
 
+        farmBeacon = _farmBeacon;
+        rewardToken = _rewardToken;
+
         // if dstEid is current chain, create reward farm
         if (_dstInfo.dstEid == _lzConfig.eid) {
             IFarm farm = _createFarm(IERC20(_rewardToken), _farmConfig);
@@ -118,9 +121,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         } else {
             revert InvalidZeroDstEid();
         }
-
-        farmBeacon = _farmBeacon;
-        rewardToken = _rewardToken;
 
         dstInfo = _dstInfo;
         lzConfig = _lzConfig;
