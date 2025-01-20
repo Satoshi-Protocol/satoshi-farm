@@ -204,23 +204,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function depositNativeAssetWithProofBatch(DepositWithProofParams[] memory depositWithProofParamsArr)
-        public
-        payable
-        whenNotPaused
-    {
-        uint256[] memory depositAmountArr = new uint256[](depositWithProofParamsArr.length);
-        for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
-            depositAmountArr[i] = depositWithProofParamsArr[i].amount;
-        }
-        _checkTotalAmount(depositAmountArr, msg.value);
-
-        for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
-            depositNativeAssetWithProof(depositWithProofParamsArr[i]);
-        }
-    }
-
-    /// @inheritdoc IFarmManager
     function depositERC20WithProof(DepositWithProofParams memory depositWithProofParams) public whenNotPaused {
         (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) = (
             depositWithProofParams.farm,
@@ -237,16 +220,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function depositERC20WithProofBatch(DepositWithProofParams[] memory depositWithProofParamsArr)
-        public
-        whenNotPaused
-    {
-        for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
-            depositERC20WithProof(depositWithProofParamsArr[i]);
-        }
-    }
-
-    /// @inheritdoc IFarmManager
     function depositNativeAsset(DepositParams memory depositParams) public payable whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (depositParams.farm, depositParams.amount, depositParams.receiver);
@@ -260,19 +233,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         emit Deposit(farm, amount, msg.sender, receiver);
     }
 
-    /// @inheritdoc IFarmManager
-    function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) public payable whenNotPaused {
-        uint256[] memory depositAmountArr = new uint256[](depositParamsArr.length);
-        for (uint256 i = 0; i < depositParamsArr.length; i++) {
-            depositAmountArr[i] = depositParamsArr[i].amount;
-        }
-
-        _checkTotalAmount(depositAmountArr, msg.value);
-
-        for (uint256 i = 0; i < depositParamsArr.length; i++) {
-            depositNativeAsset(depositParamsArr[i]);
-        }
-    }
 
     /// @inheritdoc IFarmManager
     function depositERC20(DepositParams memory depositParams) public whenNotPaused {
@@ -287,13 +247,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function depositERC20Batch(DepositParams[] memory depositParamsArr) public whenNotPaused {
-        for (uint256 i = 0; i < depositParamsArr.length; i++) {
-            depositERC20(depositParamsArr[i]);
-        }
-    }
-
-    /// @inheritdoc IFarmManager
     function withdraw(WithdrawParams memory withdrawParams) public whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (withdrawParams.farm, withdrawParams.amount, withdrawParams.receiver);
@@ -305,13 +258,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function withdrawBatch(WithdrawParams[] memory withdrawParamsArr) public whenNotPaused {
-        for (uint256 i = 0; i < withdrawParamsArr.length; i++) {
-            withdraw(withdrawParamsArr[i]);
-        }
-    }
-
-    /// @inheritdoc IFarmManager
     function requestClaim(RequestClaimParams memory requestClaimParams) public whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (requestClaimParams.farm, requestClaimParams.amount, requestClaimParams.receiver);
@@ -320,13 +266,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         (uint256 claimAmt, uint256 claimableTime, bytes32 claimId) = farm.requestClaim(amount, msg.sender, receiver);
         emit ClaimRequested(farm, claimAmt, msg.sender, receiver, claimableTime, claimId);
-    }
-
-    /// @inheritdoc IFarmManager
-    function requestClaimBatch(RequestClaimParams[] memory requestClaimParamsArr) public whenNotPaused {
-        for (uint256 i = 0; i < requestClaimParamsArr.length; i++) {
-            requestClaim(requestClaimParamsArr[i]);
-        }
     }
 
     /// @inheritdoc IFarmManager
@@ -343,13 +282,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         farm.executeClaim(amount, owner, msg.sender, claimableTime, claimId);
         emit ClaimExecuted(farm, amount, owner, msg.sender, claimableTime, claimId);
-    }
-
-    /// @inheritdoc IFarmManager
-    function executeClaimBatch(ExecuteClaimParams[] memory executeClaimParamsArr) public whenNotPaused {
-        for (uint256 i = 0; i < executeClaimParamsArr.length; i++) {
-            executeClaim(executeClaimParamsArr[i]);
-        }
     }
 
     /// @inheritdoc IFarmManager
@@ -375,17 +307,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         _stake(depositParams);
 
         emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
-    }
-
-    /// @inheritdoc IFarmManager
-    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParamsArr)
-        public
-        whenNotPaused
-        onlyDstEidIsCurrentChain
-    {
-        for (uint256 i = 0; i < stakePendingClaimParamsArr.length; i++) {
-            stakePendingClaim(stakePendingClaimParamsArr[i]);
-        }
     }
 
     /// @inheritdoc IFarmManager
@@ -420,35 +341,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function stakePendingClaimCrossChainBatch(
-        StakePendingClaimCrossChainParams[] memory stakePendingClaimCrossChainParamsArr
-    )
-        public
-        payable
-        whenNotPaused
-        onlyDstEidIsNotCurrentChain
-    {
-        uint256[] memory feeAmountArr = new uint256[](stakePendingClaimCrossChainParamsArr.length);
-        for (uint256 i = 0; i < stakePendingClaimCrossChainParamsArr.length; i++) {
-            StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams =
-                stakePendingClaimCrossChainParamsArr[i];
-            SendParam memory sendParam = formatDepositLzSendParam(
-                stakePendingClaimCrossChainParams.receiver,
-                stakePendingClaimCrossChainParams.amount,
-                stakePendingClaimCrossChainParams.extraOptions
-            );
-            MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
-            feeAmountArr[i] = expectFee.nativeFee;
-        }
-
-        _checkTotalAmount(feeAmountArr, msg.value);
-
-        for (uint256 i = 0; i < stakePendingClaimCrossChainParamsArr.length; i++) {
-            stakePendingClaimCrossChain(stakePendingClaimCrossChainParamsArr[i]);
-        }
-    }
-
-    /// @inheritdoc IFarmManager
     function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams)
         public
         whenNotPaused
@@ -467,13 +359,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         _stake(depositParams);
 
         emit ClaimAndStake(farm, claimAmt, msg.sender, receiver);
-    }
-
-    /// @inheritdoc IFarmManager
-    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParamsArr) public whenNotPaused {
-        for (uint256 i = 0; i < claimAndStakeParamsArr.length; i++) {
-            claimAndStake(claimAndStakeParamsArr[i]);
-        }
     }
 
     /// @inheritdoc IFarmManager
@@ -497,32 +382,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         _stakeCrossChain(receiver, claimAmt, extraOptions, msg.value);
 
         emit ClaimAndStake(farm, claimAmt, msg.sender, receiver);
-    }
-
-    /// @inheritdoc IFarmManager
-    function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
-        public
-        payable
-        whenNotPaused
-        onlyDstEidIsNotCurrentChain
-    {
-        uint256[] memory feeAmountArr = new uint256[](claimAndStakeCrossChainParamsArr.length);
-        for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
-            ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams = claimAndStakeCrossChainParamsArr[i];
-            SendParam memory sendParam = formatDepositLzSendParam(
-                claimAndStakeCrossChainParams.receiver,
-                claimAndStakeCrossChainParams.amount,
-                claimAndStakeCrossChainParams.extraOptions
-            );
-            MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
-            feeAmountArr[i] = expectFee.nativeFee;
-        }
-
-        _checkTotalAmount(feeAmountArr, msg.value);
-
-        for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
-            claimAndStakeCrossChain(claimAndStakeCrossChainParamsArr[i]);
-        }
     }
 
     /// @inheritdoc IFarmManager
