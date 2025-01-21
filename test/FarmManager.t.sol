@@ -305,6 +305,5 @@ contract FarmManagerTest is BaseTest {
         depositERC20(user1, farm, amount, user1);
 
         vm.warp(farmConfig.claimStartTime + 1 days);
-
     }
 }
