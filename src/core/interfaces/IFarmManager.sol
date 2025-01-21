@@ -101,6 +101,7 @@ struct ExecuteClaimParams {
     IFarm farm;
     uint256 amount;
     address owner;
+    address receiver;
     uint256 claimableTime;
     bytes32 claimId;
 }

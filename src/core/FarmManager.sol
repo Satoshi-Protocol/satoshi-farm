@@ -331,18 +331,19 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     /// @inheritdoc IFarmManager
     function executeClaim(ExecuteClaimParams memory executeClaimParams) public whenNotPaused {
-        (IFarm farm, uint256 amount, address owner, uint256 claimableTime, bytes32 claimId) = (
+        (IFarm farm, uint256 amount, address owner, address receiver, uint256 claimableTime, bytes32 claimId) = (
             executeClaimParams.farm,
             executeClaimParams.amount,
             executeClaimParams.owner,
+            executeClaimParams.receiver,
             executeClaimParams.claimableTime,
             executeClaimParams.claimId
         );
 
         _checkFarmIsValid(farm);
 
-        farm.executeClaim(amount, owner, msg.sender, claimableTime, claimId);
-        emit ClaimExecuted(farm, amount, owner, msg.sender, claimableTime, claimId);
+        farm.executeClaim(amount, owner, receiver, claimableTime, claimId);
+        emit ClaimExecuted(farm, amount, owner, receiver, claimableTime, claimId);
     }
 
     /// @inheritdoc IFarmManager
