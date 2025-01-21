@@ -94,6 +94,7 @@ struct RequestClaimParams {
  * @param farm The farm to execute claim
  * @param amount The amount to claim
  * @param owner The owner of the claim
+ * @param receiver The receiver of the claim
  * @param claimableTime The claimable time of the claim
  * @param claimId The id of the claim
  */

@@ -189,6 +189,7 @@ contract FarmManagerTest is BaseTest {
                 farm: farm,
                 amount: claimAmount,
                 owner: user1,
+                receiver: user1,
                 claimableTime: claimableTime,
                 claimId: claimId
             })
@@ -203,6 +204,7 @@ contract FarmManagerTest is BaseTest {
                 farm: farm,
                 amount: claimAmount,
                 owner: user1,
+                receiver: user1,
                 claimableTime: claimableTime,
                 claimId: claimId
             })
@@ -223,6 +225,7 @@ contract FarmManagerTest is BaseTest {
                 farm: farm,
                 amount: claimAmount,
                 owner: user1,
+                receiver: user1,
                 claimableTime: claimableTime,
                 claimId: claimId
             })
