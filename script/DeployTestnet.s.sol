@@ -16,7 +16,7 @@ import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import { ERC20Mock } from "./testnet/MockERC20.sol";
-import { TestnetConfigHelper, BaseSepTestnetConfig, ArbSepTestnetConfig } from "./testnet/TestnetConfig.sol";
+import { ArbSepTestnetConfig, BaseSepTestnetConfig, TestnetConfigHelper } from "./testnet/TestnetConfig.sol";
 
 contract DeployTestnet is Script, BaseSepTestnetConfig {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -67,13 +67,17 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         ERC20Mock memeAsset = new ERC20Mock("MEME", "MEME");
         memeAsset.mint(whitelistAddresses[0], 10_000_000e18);
         memeAsset.mint(whitelistAddresses[1], 10_000_000e18);
-        IFarm memeFarm1 = IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWithWhitelist())));
+        IFarm memeFarm1 =
+            IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWithWhitelist())));
 
-        IFarm memeFarm2 = IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWith10000Cap500per())));
+        IFarm memeFarm2 =
+            IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWith10000Cap500per())));
 
-        IFarm memeFarm3 = IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWith10000Cap500per())));
+        IFarm memeFarm3 =
+            IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWith10000Cap500per())));
 
-        IFarm memeFarm4 = IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWithNoCap())));
+        IFarm memeFarm4 =
+            IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWithNoCap())));
 
         farmManager.updateWhitelistConfig(memeFarm1, WhitelistConfig({ enabled: true, merkleRoot: whitelistRoot }));
         farmManager.updateWhitelistConfig(memeFarm3, WhitelistConfig({ enabled: true, merkleRoot: whitelistRoot }));
@@ -84,7 +88,7 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         // farmManager.depositERC20(DepositParams(memeFarm3, 100 ether, deployer));
         farmManager.depositERC20(DepositParams(memeFarm4, 100 ether, deployer));
 
-        if(DST_INFO.dstEid == LZ_CONFIG.eid) {
+        if (DST_INFO.dstEid == LZ_CONFIG.eid) {
             IRewardToken(REWARD_TOKEN_ADDRESS).grantRole(MINTER_ROLE, address(farmManager));
         }
 
@@ -123,6 +127,5 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         for (uint256 i = 0; i < proof2.length; i++) {
             console.logBytes32(proof2[i]);
         }
-        
     }
 }
