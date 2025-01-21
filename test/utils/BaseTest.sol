@@ -92,6 +92,7 @@ abstract contract BaseTest is DeployBase {
                 farm: farm,
                 amount: amount,
                 owner: user,
+                receiver: user,
                 claimableTime: claimableTime,
                 claimId: claimId
             })

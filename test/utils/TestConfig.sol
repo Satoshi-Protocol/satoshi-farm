@@ -27,7 +27,7 @@ abstract contract TestConfig {
     });
 
     FarmConfig internal DEFAULT_FARM_CONFIG = FarmConfig({
-        depositCap: 10_000e18,
+        depositCap: 2000e18,
         depositCapPerUser: 1000e18,
         rewardRate: 1000,
         depositStartTime: uint32(block.timestamp),

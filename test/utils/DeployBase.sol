@@ -34,6 +34,10 @@ abstract contract DeployBase is Test, TestConfig {
         _deployImplementation(DEPLOYER);
         _deployFarmBeacon(DEPLOYER, OWNER);
         _deployFarmManager(DEPLOYER);
+
+        vm.label(address(farmManager), "FarmManager");
+        vm.label(address(rewardFarm), "RewardFarm");
+        vm.label(address(rewardToken), "RewardToken");
     }
 
     function _deployMockRewardToken(address deployer) internal {

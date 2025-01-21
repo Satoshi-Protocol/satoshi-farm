@@ -115,6 +115,7 @@ contract FarmManagerERC20FuzzTest is Test, DeployBase {
                 farm: farm,
                 amount: claimAmt,
                 owner: user,
+                receiver: user,
                 claimableTime: claimableTime,
                 claimId: claimId
             })
