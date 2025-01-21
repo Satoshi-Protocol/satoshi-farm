@@ -2,7 +2,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    foundry.url = "github:shazow/foundry.nix/monthly"; # Use monthly branch for permanent releases
+    foundry.url = "github:shazow/foundry.nix"; # Use monthly branch for permanent releases
   };
 
   outputs = { self, nixpkgs, flake-utils, foundry }:
