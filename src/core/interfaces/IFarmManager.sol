@@ -296,12 +296,28 @@ interface IFarmManager is IOAppComposer {
     function depositNativeAssetWithProof(DepositWithProofParams memory depositParams) external payable;
 
     /**
+     * @notice Deposit Native Asset with proof batch
+     * @dev Only used if the underlying asset is native asset
+     * @dev Only whitelisted users can deposit with proof
+     * @param depositParamsArr The deposit parameters array
+     */
+    function depositNativeAssetWithProofBatch(DepositWithProofParams[] memory depositParamsArr) external payable;
+
+    /**
      * @notice Deposit ERC20 with proof
      * @dev Only used if the underlying asset is ERC20
      * @dev Only whitelisted users can deposit with proof
      * @param depositParams The deposit parameters
      */
     function depositERC20WithProof(DepositWithProofParams memory depositParams) external;
+
+    /**
+     * @notice Deposit ERC20 with proof batch
+     * @dev Only used if the underlying asset is ERC20
+     * @dev Only whitelisted users can deposit with proof
+     * @param depositParamsArr The deposit parameters array
+     */
+    function depositERC20WithProofBatch(DepositWithProofParams[] memory depositParamsArr) external;
 
     /**
      * @notice Deposit Native Asset
@@ -311,11 +327,25 @@ interface IFarmManager is IOAppComposer {
     function depositNativeAsset(DepositParams memory depositParams) external payable;
 
     /**
+     * @notice Deposit Native Asset batch
+     * @dev Only used if the underlying asset is native asset
+     * @param depositParamsArr The deposit parameters array
+     */
+    function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) external payable;
+
+    /**
      * @notice Deposit ERC20
      * @dev Only used if the underlying asset is ERC20
      * @param depositParams The deposit parameters
      */
     function depositERC20(DepositParams memory depositParams) external;
+
+    /**
+     * @notice Deposit ERC20 batch
+     * @dev Only used if the underlying asset is ERC20
+     * @param depositParamsArr The deposit parameters array
+     */
+    function depositERC20Batch(DepositParams[] memory depositParamsArr) external;
 
     /**
      * @notice Withdraw
@@ -324,10 +354,22 @@ interface IFarmManager is IOAppComposer {
     function withdraw(WithdrawParams memory withdrawParams) external;
 
     /**
+     * @notice Withdraw batch
+     * @param withdrawParamsArr The withdraw parameters array
+     */
+    function withdrawBatch(WithdrawParams[] memory withdrawParamsArr) external;
+
+    /**
      * @notice Request claim
      * @param requestClaimParams The request claim parameters
      */
     function requestClaim(RequestClaimParams memory requestClaimParams) external;
+
+    /**
+     * @notice Request claim batch
+     * @param requestClaimParamsArr The request claim parameters array
+     */
+    function requestClaimBatch(RequestClaimParams[] memory requestClaimParamsArr) external;
 
     /**
      * @notice Execute claim
@@ -336,12 +378,26 @@ interface IFarmManager is IOAppComposer {
     function executeClaim(ExecuteClaimParams memory executeClaimParams) external;
 
     /**
+     * @notice Execute claim batch
+     * @param executeClaimParamsArr The execute claim parameters array
+     */
+    function executeClaimBatch(ExecuteClaimParams[] memory executeClaimParamsArr) external;
+
+    /**
      * @notice Stake pending claim
      * @dev Only used if the reward farm deployed chain is current chain
      * @dev Only used if the claim is requested
      * @param stakePendingClaimParams The stake pending claim parameters
      */
     function stakePendingClaim(StakePendingClaimParams memory stakePendingClaimParams) external;
+
+    /**
+     * @notice Stake pending claim batch
+     * @dev Only used if the reward farm deployed chain is current chain
+     * @dev Only used if the claim is requested
+     * @param stakePendingClaimParamsArr The stake pending claim parameters array
+     */
+    function stakePendingClaimBatch(StakePendingClaimParams[] memory stakePendingClaimParamsArr) external;
 
     /**
      * @notice Stake pending claim cross chain
@@ -354,6 +410,18 @@ interface IFarmManager is IOAppComposer {
         payable;
 
     /**
+     * @notice Stake pending claim cross chain batch
+     * @dev Only used if the reward farm deployed chain is different from the current chain
+     * @dev Only used if the claim is requested
+     * @param stakePendingClaimCrossChainParamsArr The stake pending claim cross chain parameters array
+     */
+    function stakePendingClaimCrossChainBatch(
+        StakePendingClaimCrossChainParams[] memory stakePendingClaimCrossChainParamsArr
+    )
+        external
+        payable;
+
+    /**
      * @notice Claim and stake
      * @dev Only used if the reward farm deployed chain is current chain
      * @param claimAndStakeParams The claim and stake parameters
@@ -361,11 +429,27 @@ interface IFarmManager is IOAppComposer {
     function claimAndStake(ClaimAndStakeParams memory claimAndStakeParams) external;
 
     /**
+     * @notice Claim and stake batch
+     * @dev Only used if the reward farm deployed chain is current chain
+     * @param claimAndStakeParamsArr The claim and stake parameters array
+     */
+    function claimAndStakeBatch(ClaimAndStakeParams[] memory claimAndStakeParamsArr) external;
+
+    /**
      * @notice Claim and stake cross chain
      * @dev Only used if the reward farm deployed chain is different from the current chain
      * @param claimAndStakeCrossChainParams The claim and stake cross chain parameters
      */
     function claimAndStakeCrossChain(ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams)
+        external
+        payable;
+
+    /**
+     * @notice Claim and stake cross chain batch
+     * @dev Only used if the reward farm deployed chain is different from the current chain
+     * @param claimAndStakeCrossChainParamsArr The claim and stake cross chain parameters array
+     */
+    function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
         external
         payable;
 
