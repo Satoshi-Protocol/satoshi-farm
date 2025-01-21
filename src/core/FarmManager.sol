@@ -680,7 +680,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             if (_amountLD != depositParams.amount) revert InvalidReceiveAmount(_amountLD, depositParams.amount);
 
             rewardToken.approve(address(depositParams.farm), depositParams.amount);
-            depositERC20(depositParams);
+            dstInfo.dstRewardFarm.depositERC20(depositParams.amount, address(this), depositParams.receiver);
         } else {
             revert InvalidOpt(opt);
         }
@@ -734,8 +734,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
      * @param depositParams The deposit parameters
      */
     function _stake(DepositParams memory depositParams) internal {
-        rewardToken.approve(address(dstInfo.dstRewardFarm), depositParams.amount);
-        depositERC20(depositParams);
+        rewardToken.approve(address(this), depositParams.amount);
+
+        depositParams.farm.depositERC20(depositParams.amount, address(this), depositParams.receiver);
     }
 
     /**
@@ -750,7 +751,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
         if (msgValue < expectFee.nativeFee) revert InsufficientFee(expectFee.nativeFee, msgValue);
 
-        rewardToken.send{ value: msgValue }(sendParam, expectFee, lzConfig.refundAddress);
+        rewardToken.send{ value: expectFee.nativeFee }(sendParam, expectFee, lzConfig.refundAddress);
     }
 
     /**

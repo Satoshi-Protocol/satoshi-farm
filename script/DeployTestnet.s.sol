@@ -55,7 +55,7 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         // deploy farm manager proxy
         bytes memory data = abi.encodeCall(
             FarmManager.initialize,
-            (farmBeacon, IRewardToken(REWARD_TOKEN_ADDRESS), DST_INFO, LZ_CONFIG, REWARD_FARM_CONFIG)
+            (farmBeacon, IRewardToken(REWARD_TOKEN_ADDRESS), DST_INFO, LZ_CONFIG,TestnetConfigHelper.getRewardFarmConfig())
         );
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
@@ -88,9 +88,7 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         // farmManager.depositERC20(DepositParams(memeFarm3, 100 ether, deployer));
         farmManager.depositERC20(DepositParams(memeFarm4, 100 ether, deployer));
 
-        if (DST_INFO.dstEid == LZ_CONFIG.eid) {
-            IRewardToken(REWARD_TOKEN_ADDRESS).grantRole(MINTER_ROLE, address(farmManager));
-        }
+        IRewardToken(REWARD_TOKEN_ADDRESS).grantRole(MINTER_ROLE, address(farmManager));
 
         vm.stopBroadcast();
         console.log("===== Deployed contracts =====");

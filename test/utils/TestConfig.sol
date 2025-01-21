@@ -12,8 +12,8 @@ address constant OWNER = 0x1111111111111111111111111111111111111111;
 
 abstract contract TestConfig {
     FarmConfig internal DEFAULT_REWARD_FARM_CONFIG = FarmConfig({
-        depositCap: 0,
-        depositCapPerUser: 0,
+        depositCap: 1000000e18,
+        depositCapPerUser: 1000000e18,
         rewardRate: 1000,
         depositStartTime: 0,
         depositEndTime: type(uint32).max,

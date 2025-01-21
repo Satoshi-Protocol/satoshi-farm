@@ -304,6 +304,16 @@ contract FarmManagerTest is BaseTest {
         // deposit and check the share is correct
         depositERC20(user1, farm, amount, user1);
 
-        vm.warp(farmConfig.claimStartTime + 1 days);
+        vm.warp(farmConfig.claimStartTime + 3 days);
+
+        vm.startPrank(user1);
+        uint256 claimAmt = 10000;
+        ClaimAndStakeParams memory claimAndStakeParams = ClaimAndStakeParams({
+            farm: farm,
+            amount: claimAmt,
+            receiver: user1
+        });
+        farmManager.claimAndStake(claimAndStakeParams);
+        vm.stopPrank();
     }
 }
