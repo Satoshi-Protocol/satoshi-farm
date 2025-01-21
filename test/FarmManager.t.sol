@@ -306,6 +306,5 @@ contract FarmManagerTest is BaseTest {
 
         vm.warp(farmConfig.claimStartTime + 1 days);
 
-        uint256 pendingReward = farmManager.getPendingReward(farm, user1);
     }
 }
