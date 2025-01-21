@@ -307,12 +307,9 @@ contract FarmManagerTest is BaseTest {
         vm.warp(farmConfig.claimStartTime + 3 days);
 
         vm.startPrank(user1);
-        uint256 claimAmt = 10000;
-        ClaimAndStakeParams memory claimAndStakeParams = ClaimAndStakeParams({
-            farm: farm,
-            amount: claimAmt,
-            receiver: user1
-        });
+        uint256 claimAmt = 10_000;
+        ClaimAndStakeParams memory claimAndStakeParams =
+            ClaimAndStakeParams({ farm: farm, amount: claimAmt, receiver: user1 });
         farmManager.claimAndStake(claimAndStakeParams);
         vm.stopPrank();
     }

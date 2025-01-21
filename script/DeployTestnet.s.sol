@@ -55,7 +55,13 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         // deploy farm manager proxy
         bytes memory data = abi.encodeCall(
             FarmManager.initialize,
-            (farmBeacon, IRewardToken(REWARD_TOKEN_ADDRESS), DST_INFO, LZ_CONFIG,TestnetConfigHelper.getRewardFarmConfig())
+            (
+                farmBeacon,
+                IRewardToken(REWARD_TOKEN_ADDRESS),
+                DST_INFO,
+                LZ_CONFIG,
+                TestnetConfigHelper.getRewardFarmConfig()
+            )
         );
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
