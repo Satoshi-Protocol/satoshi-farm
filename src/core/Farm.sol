@@ -517,13 +517,7 @@ contract Farm is IFarm, Initializable {
         if (claimStatus == ClaimStatus.PENDING) {
             if (claimableTime > block.timestamp) revert ClaimIsNotReady(claimableTime, block.timestamp);
         } else {
-            if (farmConfig.claimDelayTime == 0) {
-                // if no delay time, request claim then claim immediately
-                _requestClaim(amount, owner, receiver);
-            } else {
-                // if has delay time, use `requestClaim` first then `claim` later
-                revert RequestClaimFirst();
-            }
+            revert RequestClaimFirst();
         }
     }
 
