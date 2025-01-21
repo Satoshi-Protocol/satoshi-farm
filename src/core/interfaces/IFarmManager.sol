@@ -639,11 +639,4 @@ interface IFarmManager is IOAppComposer {
         external
         view
         returns (SendParam memory sendParam);
-
-    /**
-     * @notice Multicall function
-     * @param data The data to call
-     * @return results The results of the multicall
-     */
-    function multicall(bytes[] calldata data) external returns (bytes[] memory results);
 }

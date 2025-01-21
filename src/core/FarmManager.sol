@@ -263,6 +263,20 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) public payable whenNotPaused {
+        uint256[] memory depositAmountArr = new uint256[](depositParamsArr.length);
+        for (uint256 i = 0; i < depositParamsArr.length; i++) {
+            depositAmountArr[i] = depositParamsArr[i].amount;
+        }
+
+        _checkTotalAmount(depositAmountArr, msg.value);
+
+        for (uint256 i = 0; i < depositParamsArr.length; i++) {
+            depositNativeAsset(depositParamsArr[i]);
+        }
+    }
+
+    /// @inheritdoc IFarmManager
     function depositERC20(DepositParams memory depositParams) public whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (depositParams.farm, depositParams.amount, depositParams.receiver);
@@ -783,18 +797,5 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
      */
     function _dstEidIsCurrentChain() internal view returns (bool) {
         return lzConfig.eid == dstInfo.dstEid;
-    }
-
-    /// @inheritdoc IFarmManager
-    function multicall(bytes[] calldata data) external returns (bytes[] memory results) {
-        /* reference to the original OZ's implementation */
-        bytes memory context =
-            msg.sender == _msgSender() ? new bytes(0) : msg.data[msg.data.length - _contextSuffixLength():];
-
-        results = new bytes[](data.length);
-        for (uint256 i = 0; i < data.length; i++) {
-            results[i] = Address.functionDelegateCall(address(this), bytes.concat(data[i], context));
-        }
-        return results;
     }
 }
