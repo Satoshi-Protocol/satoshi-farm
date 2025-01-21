@@ -7,7 +7,6 @@ import { MerkleLib } from "../../test/utils/MerkleLib.sol";
 import { DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
 
-
 library TestnetConfigHelper {
     function prepareMerkleProof(bytes32[] memory whitelist, uint256 index) public pure returns (bytes32[] memory) {
         bytes32[] memory proof = MerkleLib.prepareMerkleProof(whitelist, index);
@@ -25,11 +24,11 @@ library TestnetConfigHelper {
 
     function getMemeFarmConfigWith10000Cap500per() internal view returns (FarmConfig memory) {
         return FarmConfig({
-            depositCap: 10000 ether,
+            depositCap: 10_000 ether,
             depositCapPerUser: 500 ether,
             depositStartTime: uint32(block.timestamp),
             depositEndTime: uint32(block.timestamp + 30 days),
-            rewardRate: 10_000 * 10**18,
+            rewardRate: 10_000 * 10 ** 18,
             rewardStartTime: uint32(block.timestamp),
             rewardEndTime: uint32(block.timestamp + 30 days),
             claimStartTime: uint32(block.timestamp),
@@ -46,7 +45,7 @@ library TestnetConfigHelper {
             depositCapPerUser: 10_000 ether,
             depositStartTime: uint32(block.timestamp),
             depositEndTime: uint32(block.timestamp + 30 days),
-            rewardRate: 10_000 * 10**18,
+            rewardRate: 10_000 * 10 ** 18,
             rewardStartTime: uint32(block.timestamp),
             rewardEndTime: uint32(block.timestamp + 30 days),
             claimStartTime: uint32(block.timestamp),
@@ -60,10 +59,10 @@ library TestnetConfigHelper {
     function getMemeFarmConfigWithNoCap() internal view returns (FarmConfig memory) {
         return FarmConfig({
             depositCap: type(uint256).max,
-            depositCapPerUser:type(uint256).max,
+            depositCapPerUser: type(uint256).max,
             depositStartTime: uint32(block.timestamp),
             depositEndTime: uint32(block.timestamp + 30 days),
-            rewardRate: 10_000 * 10**18,
+            rewardRate: 10_000 * 10 ** 18,
             rewardStartTime: uint32(block.timestamp),
             rewardEndTime: uint32(block.timestamp + 30 days),
             claimStartTime: uint32(block.timestamp),
@@ -74,6 +73,7 @@ library TestnetConfigHelper {
         });
     }
 }
+
 abstract contract ArbSepTestnetConfig {
     bool constant IS_DEPLOY_MEME_FARM = true;
     address constant REWARD_TOKEN_ADDRESS = address(0x1e1d7C76Bd273d60E756322A8Ea9A1914327fa13);
