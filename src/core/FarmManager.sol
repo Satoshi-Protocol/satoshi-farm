@@ -26,10 +26,12 @@ import { OFTComposeMsgCodec } from "../layerzero/OFTComposeMsgCodec.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title FarmManager contract
@@ -524,19 +526,20 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         payable
         override
     {
-        require(_oApp == address(rewardToken), "!oApp");
-        require(msg.sender == lzConfig.endpoint, "!endpoint");
+        if (_oApp != address(rewardToken)) revert InvalidOApp(_oApp, address(rewardToken));
+        if (msg.sender != lzConfig.endpoint) revert InvalidLzEndpoint(msg.sender, lzConfig.endpoint);
         // Extract the composed message from the delivered message using the MsgCodec
         (LZ_COMPOSE_OPT opt, bytes memory data) =
             abi.decode(OFTComposeMsgCodec.composeMsg(_message), (LZ_COMPOSE_OPT, bytes));
         if (opt == LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN) {
             uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
             (DepositParams memory depositParams) = abi.decode(data, (DepositParams));
-            require(_amountLD == depositParams.amount, "invalid receive amount");
+            if (_amountLD != depositParams.amount) revert InvalidReceiveAmount(_amountLD, depositParams.amount);
+
             rewardToken.approve(address(depositParams.farm), depositParams.amount);
             depositERC20(depositParams);
         } else {
-            revert("Invalid opt");
+            revert InvalidOpt(opt);
         }
     }
 
@@ -651,5 +654,18 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
      */
     function _dstEidIsCurrentChain() internal view returns (bool) {
         return lzConfig.eid == dstInfo.dstEid;
+    }
+
+    /// @inheritdoc IFarmManager
+    function multicall(bytes[] calldata data) external returns (bytes[] memory results) {
+        /* reference to the original OZ's implementation */
+        bytes memory context =
+            msg.sender == _msgSender() ? new bytes(0) : msg.data[msg.data.length - _contextSuffixLength():];
+
+        results = new bytes[](data.length);
+        for (uint256 i = 0; i < data.length; i++) {
+            results[i] = Address.functionDelegateCall(address(this), bytes.concat(data[i], context));
+        }
+        return results;
     }
 }

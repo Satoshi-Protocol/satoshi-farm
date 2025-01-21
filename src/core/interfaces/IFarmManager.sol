@@ -187,6 +187,10 @@ interface IFarmManager is IOAppComposer {
     error InvalidZeroDstEid();
     error DstEidIsNotCurrentChain(uint32 dstEid, uint32 currentEid);
     error DstEidIsCurrentChain(uint32 dstEid, uint32 currentEid);
+    error InvalidOApp(address OApp, address expectedOApp);
+    error InvalidLzEndpoint(address msgSender, address lzEndpoint);
+    error InvalidReceiveAmount(uint256 receiveAmount, uint256 depositAmount);
+    error InvalidOpt(LZ_COMPOSE_OPT opt);
 
     event RewardRateUpdated(IFarm farm, uint256 rewardRate);
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
@@ -549,4 +553,11 @@ interface IFarmManager is IOAppComposer {
         external
         view
         returns (SendParam memory sendParam);
+
+    /**
+     * @notice Multicall function
+     * @param data The data to call
+     * @return results The results of the multicall
+     */
+    function multicall(bytes[] calldata data) external returns (bytes[] memory results);
 }
