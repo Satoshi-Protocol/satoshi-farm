@@ -12,6 +12,7 @@ import {
     DstInfo,
     ExecuteClaimParams,
     IFarmManager,
+    InstantClaimParams,
     LZ_COMPOSE_OPT,
     LzConfig,
     RequestClaimParams,
@@ -462,7 +463,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        uint256 claimAmt = farm.instantClaim(amount, msg.sender, address(this));
+        uint256 claimAmt = farm.forceClaim(amount, msg.sender, address(this));
 
         DepositParams memory depositParams =
             DepositParams({ farm: dstInfo.dstRewardFarm, amount: claimAmt, receiver: receiver });
@@ -495,7 +496,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        uint256 claimAmt = farm.instantClaim(amount, msg.sender, address(this));
+        uint256 claimAmt = farm.forceClaim(amount, msg.sender, address(this));
 
         _stakeCrossChain(receiver, claimAmt, extraOptions, msg.value);
 
@@ -525,6 +526,25 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
             claimAndStakeCrossChain(claimAndStakeCrossChainParamsArr[i]);
+        }
+    }
+
+    /// @inheritdoc IFarmManager
+    function instantClaim(InstantClaimParams memory instantClaimParams) public whenNotPaused {
+        (IFarm farm, uint256 amount, address receiver) =
+            (instantClaimParams.farm, instantClaimParams.amount, instantClaimParams.receiver);
+
+        _checkFarmIsValid(farm);
+
+        uint256 claimAmt = farm.instantClaim(amount, msg.sender, receiver);
+
+        emit InstantClaim(farm, claimAmt, msg.sender, receiver);
+    }
+
+    /// @inheritdoc IFarmManager
+    function instantClaimBatch(InstantClaimParams[] memory instantClaimParamsArr) public whenNotPaused {
+        for (uint256 i = 0; i < instantClaimParamsArr.length; i++) {
+            instantClaim(instantClaimParamsArr[i]);
         }
     }
 

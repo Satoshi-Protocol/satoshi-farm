@@ -35,7 +35,7 @@ library TestnetConfigHelper {
             claimEndTime: uint32(block.timestamp + 60 days),
             claimDelayTime: 5 minutes,
             withdrawEnabled: true,
-            instantClaimEnabled: true
+            forceClaimEnabled: true
         });
     }
 
@@ -52,7 +52,7 @@ library TestnetConfigHelper {
             claimEndTime: uint32(block.timestamp + 60 days),
             claimDelayTime: 5 minutes,
             withdrawEnabled: true,
-            instantClaimEnabled: true
+            forceClaimEnabled: true
         });
     }
 
@@ -69,7 +69,7 @@ library TestnetConfigHelper {
             claimEndTime: uint32(block.timestamp + 60 days),
             claimDelayTime: 5 minutes,
             withdrawEnabled: true,
-            instantClaimEnabled: true
+            forceClaimEnabled: true
         });
     }
 
@@ -86,7 +86,7 @@ library TestnetConfigHelper {
             claimEndTime: uint32(block.timestamp + 60 days),
             claimDelayTime: 5 minutes,
             withdrawEnabled: true,
-            instantClaimEnabled: true
+            forceClaimEnabled: true
         });
     }
 }

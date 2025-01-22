@@ -18,6 +18,6 @@ abstract contract DeploySetupConfig {
         claimEndTime: type(uint32).max,
         claimDelayTime: 0,
         withdrawEnabled: false,
-        instantClaimEnabled: false
+        forceClaimEnabled: false
     });
 }

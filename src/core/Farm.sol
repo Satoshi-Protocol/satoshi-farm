@@ -251,6 +251,15 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
+    function forceClaim(uint256 amount, address owner, address receiver) external onlyFarmManager returns (uint256) {
+        _beforeForceClaim(amount, owner, receiver);
+
+        uint256 claimAmt = _forceClaim(amount, owner, receiver);
+
+        return claimAmt;
+    }
+
+    /// @inheritdoc IFarm
     function instantClaim(uint256 amount, address owner, address receiver) external onlyFarmManager returns (uint256) {
         _beforeInstantClaim(amount, owner, receiver);
 
@@ -329,10 +338,14 @@ contract Farm is IFarm, Initializable {
     }
 
     /**
-     * @notice Check if instant claim is enabled
+     * @notice Check if force claim is enabled
      */
-    function _checkIsInstantClaimEnabled() internal view {
-        if (!_isInstantClaimEnabled()) revert InstantClaimNotEnabled();
+    function _checkIsForceClaimEnabled() internal view {
+        if (!_isForceClaimEnabled()) revert ForceClaimNotEnabled();
+    }
+
+    function _checkDelayTimeIsZero() internal view {
+        if (!_isZeroDelayTime()) revert DelayTimeIsNotZero();
     }
 
     /**
@@ -350,10 +363,14 @@ contract Farm is IFarm, Initializable {
     }
 
     /**
-     * @notice Check if instant claim is enabled
+     * @notice Check if force claim is enabled
      */
-    function _isInstantClaimEnabled() internal view returns (bool) {
-        return farmConfig.instantClaimEnabled;
+    function _isForceClaimEnabled() internal view returns (bool) {
+        return farmConfig.forceClaimEnabled;
+    }
+
+    function _isZeroDelayTime() internal view returns (bool) {
+        return farmConfig.claimDelayTime == 0;
     }
 
     /**
@@ -542,6 +559,7 @@ contract Farm is IFarm, Initializable {
 
         // mint reward to receiver
         farmManager.mintRewardCallback(receiver, amount);
+
         emit ClaimExecuted(claimId, amount, owner, receiver, claimableTime);
     }
 
@@ -567,7 +585,7 @@ contract Farm is IFarm, Initializable {
 
         ClaimStatus claimStatus = _claimStatus[claimId];
 
-        if (claimStatus != ClaimStatus.PENDING) revert InvalidStatusToInstantClaimPending(claimStatus);
+        if (claimStatus != ClaimStatus.PENDING) revert InvalidStatusToForceExecuteClaim(claimStatus);
     }
 
     /**
@@ -594,12 +612,48 @@ contract Farm is IFarm, Initializable {
     }
 
     /**
+     * @notice Before force claim hook
+     * @param owner The owner address
+     */
+    function _beforeForceClaim(uint256, /* amount */ address owner, address /* receiver */ ) internal {
+        _checkIsClaimable();
+        _checkIsForceClaimEnabled();
+
+        _updateReward(owner);
+    }
+
+    /**
+     * @notice Force claim internal function
+     * @param amount The claim amount
+     * @param owner The owner address
+     * @param receiver The receiver address
+     */
+    function _forceClaim(uint256 amount, address owner, address receiver) internal returns (uint256) {
+        uint256 pendingRewards = _pendingRewards[owner];
+        if (pendingRewards == 0) revert ZeroPendingRewards();
+
+        if (amount > pendingRewards) {
+            // if amount exceeds pending rewards, claim all pending rewards
+            amount = pendingRewards;
+        }
+
+        // update state
+        _updatePendingReward(owner, amount, false);
+
+        farmManager.mintRewardCallback(receiver, amount);
+
+        emit ForceClaimed(amount, owner, receiver);
+
+        return amount;
+    }
+
+    /**
      * @notice Before instant claim hook
      * @param owner The owner address
      */
     function _beforeInstantClaim(uint256, /* amount */ address owner, address /* receiver */ ) internal {
         _checkIsClaimable();
-        _checkIsInstantClaimEnabled();
+        _checkDelayTimeIsZero();
 
         _updateReward(owner);
     }
@@ -621,6 +675,7 @@ contract Farm is IFarm, Initializable {
 
         // update state
         _updatePendingReward(owner, amount, false);
+
         farmManager.mintRewardCallback(receiver, amount);
 
         emit InstantClaimed(amount, owner, receiver);

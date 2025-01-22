@@ -22,7 +22,7 @@ address constant DEFAULT_NATIVE_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEe
  * @param claimEndTime claim end time
  * @param claimDelayTime delay time for claim
  * @param withdrawEnabled is withdraw enabled
- * @param instantClaimEnabled is instant claim enabled
+ * @param forceClaimEnabled is force claim enabled
  */
 struct FarmConfig {
     uint256 depositCap;
@@ -36,7 +36,7 @@ struct FarmConfig {
     uint32 claimEndTime;
     uint32 claimDelayTime;
     bool withdrawEnabled;
-    bool instantClaimEnabled;
+    bool forceClaimEnabled;
 }
 
 /**
@@ -80,7 +80,7 @@ interface IFarm {
     error ZeroPendingRewards();
     error RequestClaimFirst();
     error InvalidStatusToRequestClaim(ClaimStatus status);
-    error InvalidStatusToInstantClaimPending(ClaimStatus status);
+    error InvalidStatusToForceExecuteClaim(ClaimStatus status);
     error InvalidAmount(uint256 msgValue, uint256 amount);
     error TransferNativeAssetFailed();
     error InvalidDepositNativeAsset();
@@ -93,8 +93,9 @@ interface IFarm {
     error InvalidConfigDepositTime(uint256 depositStartTime, uint256 depositEndTime);
     error InvalidConfigClaimTime(uint256 claimStartTime, uint256 claimEndTime);
     error InvalidConfigDepositCap(uint256 depositCap, uint256 depositCapPerUser);
-    error InstantClaimNotEnabled();
+    error ForceClaimNotEnabled();
     error WithdrawNotEnabled();
+    error DelayTimeIsNotZero();
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
@@ -106,6 +107,7 @@ interface IFarm {
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
     );
     event ForceClaimExecuted(bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver);
+    event ForceClaimed(uint256 indexed amount, address owner, address receiver);
     event InstantClaimed(uint256 indexed amount, address owner, address receiver);
     event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add, uint256 timestamp);
     event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
@@ -252,8 +254,19 @@ interface IFarm {
         external;
 
     /**
+     * @notice force claim reward token
+     * @dev Force claim reward token without waiting for delay time
+     * @dev Used in the claim&stake function
+     * @param amount The amount of the reward token to claim
+     * @param owner The address of the owner
+     * @param receiver The address of the receiver
+     * @return claimAmt The actual claim amount claimed
+     */
+    function forceClaim(uint256 amount, address owner, address receiver) external returns (uint256 claimAmt);
+
+    /**
      * @notice Instant claim reward token
-     * @dev Instant claim reward token without waiting for delay time
+     * @dev Instant claim reward token if delay time is 0
      * @param amount The amount of the reward token to claim
      * @param owner The address of the owner
      * @param receiver The address of the receiver
@@ -351,7 +364,7 @@ interface IFarm {
      * @return claimEndTime The claim end time
      * @return claimDelayTime The claim delay time
      * @return withdrawEnabled The withdraw enabled
-     * @return instantClaimEnabled The instant claim enabled
+     * @return forceClaimEnabled The force claim enabled
      */
     function farmConfig()
         external
@@ -368,7 +381,7 @@ interface IFarm {
             uint32 claimEndTime,
             uint32 claimDelayTime,
             bool withdrawEnabled,
-            bool instantClaimEnabled
+            bool forceClaimEnabled
         );
 
     /**

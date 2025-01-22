@@ -172,6 +172,19 @@ struct ClaimAndStakeCrossChainParams {
 }
 
 /**
+ * @notice The parameters for instant claim
+ * @dev Only used if the reward farm delay time is 0
+ * @param farm The farm to claim
+ * @param amount The amount to claim
+ * @param receiver The receiver of the claim
+ */
+struct InstantClaimParams {
+    IFarm farm;
+    uint256 amount;
+    address receiver;
+}
+
+/**
  * @title IFarmManager interface
  * @notice The interface for the farm manager
  */
@@ -230,6 +243,8 @@ interface IFarmManager is IOAppComposer {
         bytes32 indexed claimId
     );
     event ClaimAndStake(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
+
+    event InstantClaim(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
 
     /**
      * @notice Initialize the farm manager
@@ -452,6 +467,20 @@ interface IFarmManager is IOAppComposer {
     function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
         external
         payable;
+
+    /**
+     * @notice Instant claim
+     * @dev Only used if the reward farm delay time is 0
+     * @param instantClaimParams The instant claim parameters
+     */
+    function instantClaim(InstantClaimParams memory instantClaimParams) external;
+
+    /**
+     * @notice Instant claim batch
+     * @dev Only used if the reward farm delay time is 0
+     * @param instantClaimParamsArr The instant claim parameters array
+     */
+    function instantClaimBatch(InstantClaimParams[] memory instantClaimParamsArr) external;
 
     /**
      * @notice Mint reward token

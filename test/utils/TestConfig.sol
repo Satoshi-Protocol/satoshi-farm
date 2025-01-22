@@ -23,7 +23,7 @@ abstract contract TestConfig {
         claimEndTime: type(uint32).max,
         claimDelayTime: 0,
         withdrawEnabled: false,
-        instantClaimEnabled: false
+        forceClaimEnabled: false
     });
 
     FarmConfig internal DEFAULT_FARM_CONFIG = FarmConfig({
@@ -38,7 +38,7 @@ abstract contract TestConfig {
         claimEndTime: uint32(block.timestamp + 60 days),
         claimDelayTime: uint32(1 days),
         withdrawEnabled: true,
-        instantClaimEnabled: true
+        forceClaimEnabled: true
     });
 
     LzConfig internal DEFAULT_LZ_CONFIG = LzConfig({ eid: 0, endpoint: address(0), refundAddress: address(0) });

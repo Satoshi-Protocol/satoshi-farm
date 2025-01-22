@@ -20,6 +20,6 @@ abstract contract DeployFarmConfig {
         claimEndTime: type(uint32).max,
         claimDelayTime: 0,
         withdrawEnabled: true,
-        instantClaimEnabled: false
+        forceClaimEnabled: false
     });
 }

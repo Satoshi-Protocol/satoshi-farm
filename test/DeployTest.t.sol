@@ -44,7 +44,7 @@ contract DeployTest is Test, DeployBase {
             uint32 claimEndTime,
             uint32 claimDelayTime,
             bool withdrawEnabled,
-            bool instantClaimEnabled
+            bool forceClaimEnabled
         ) = farm.farmConfig();
 
         assertEq(depositCap, DEFAULT_FARM_CONFIG.depositCap);
@@ -58,7 +58,7 @@ contract DeployTest is Test, DeployBase {
         assertEq(claimEndTime, DEFAULT_FARM_CONFIG.claimEndTime);
         assertEq(claimDelayTime, DEFAULT_FARM_CONFIG.claimDelayTime);
         assertEq(withdrawEnabled, DEFAULT_FARM_CONFIG.withdrawEnabled);
-        assertEq(instantClaimEnabled, DEFAULT_FARM_CONFIG.instantClaimEnabled);
+        assertEq(forceClaimEnabled, DEFAULT_FARM_CONFIG.forceClaimEnabled);
 
         assertEq(address(asset), address(farm.underlyingAsset()));
         assertEq(address(farmManager), address(farm.farmManager()));

@@ -167,7 +167,7 @@ contract FarmManagerERC20FuzzTest is Test, DeployBase {
             claimEndTime: uint32(block.timestamp + 60 days),
             claimDelayTime: 1 days,
             withdrawEnabled: true,
-            instantClaimEnabled: true
+            forceClaimEnabled: true
         });
     }
 }
