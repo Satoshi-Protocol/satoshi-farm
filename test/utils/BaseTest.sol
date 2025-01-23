@@ -8,6 +8,7 @@ import {
     DepositParams,
     ExecuteClaimParams,
     IFarmManager,
+    InstantClaimParams,
     RequestClaimParams,
     StakePendingClaimParams,
     WithdrawParams
@@ -60,7 +61,7 @@ abstract contract BaseTest is DeployBase {
 
     function requestClaim(address user, IFarm farm, address receiver) public returns (uint256, uint256, bytes32) {
         vm.startPrank(user);
-        uint256 claimAmt = farm.getPendingReward(user);
+        uint256 claimAmt = farm.previewReward(user);
         (uint256 claimableTime, bytes32 claimId) = _prepareClaimId(farm, claimAmt, user, receiver, block.timestamp);
 
         vm.expectEmit(true, true, true, true);
@@ -114,6 +115,12 @@ abstract contract BaseTest is DeployBase {
 
         farmManager.claimAndStake(claimAndStakeParams);
 
+        vm.stopPrank();
+    }
+
+    function instantClaim(address user, InstantClaimParams memory instantClaimParams) public {
+        vm.startPrank(user);
+        farmManager.instantClaim(instantClaimParams);
         vm.stopPrank();
     }
 

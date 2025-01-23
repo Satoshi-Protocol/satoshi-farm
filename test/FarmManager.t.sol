@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { IFarm } from "../src/core/interfaces/IFarm.sol";
+import { ClaimStatus, IFarm } from "../src/core/interfaces/IFarm.sol";
 
 import { FarmConfig } from "../src/core/interfaces/IFarm.sol";
 import {
@@ -11,6 +11,7 @@ import {
     ExecuteClaimParams,
     IFarmManager,
     IFarmManager,
+    InstantClaimParams,
     LzConfig,
     RequestClaimParams,
     StakePendingClaimParams,
@@ -174,11 +175,11 @@ contract FarmManagerTest is BaseTest {
 
         vm.warp(farmConfig.claimStartTime + 1 days);
 
-        uint256 pendingReward = farmManager.getPendingReward(farm, user1);
+        uint256 previewReward = farmManager.previewReward(farm, user1);
 
         // request claim
         (uint256 claimAmount, uint256 claimableTime, bytes32 claimId) = requestClaim(user1, farm, user1);
-        assertEq(claimAmount, pendingReward, "Claim amount is not correct");
+        assertEq(claimAmount, previewReward, "Claim amount is not correct");
         assertEq(claimableTime, block.timestamp + farmConfig.claimDelayTime, "Claimable time is not correct");
 
         // try to claim before the claimable time, should revert
@@ -306,11 +307,150 @@ contract FarmManagerTest is BaseTest {
 
         vm.warp(farmConfig.claimStartTime + 3 days);
 
+        uint256 pendingReward = farmManager.previewReward(farm, user1);
+
         vm.startPrank(user1);
         uint256 claimAmt = 10_000;
         ClaimAndStakeParams memory claimAndStakeParams =
             ClaimAndStakeParams({ farm: farm, amount: claimAmt, receiver: user1 });
         farmManager.claimAndStake(claimAndStakeParams);
+
+        // check the shares in reward farm is correct
+        assertEq(farmManager.shares(rewardFarm, user1), claimAmt, "Share is not correct");
+
+        assertEq(farmManager.previewReward(farm, user1), pendingReward - claimAmt, "Preview reward is not correct");
+        vm.stopPrank();
+    }
+
+    function test_stakePendingClaim() public {
+        FarmConfig memory farmConfig = farmManager.getFarmConfig(farm);
+
+        deal(address(asset), user1, 100e18);
+
+        uint256 amount = 1e18;
+
+        // deposit and check the share is correct
+        depositERC20(user1, farm, amount, user1);
+
+        vm.warp(farmConfig.claimStartTime + 3 days);
+
+        uint256 pendingReward = farmManager.previewReward(farm, user1);
+
+        // request claim
+        (uint256 claimAmount, uint256 claimableTime, bytes32 claimId) = requestClaim(user1, farm, user1);
+
+        assertEq(claimAmount, pendingReward, "Claim amount is not correct");
+
+        StakePendingClaimParams memory stakePendingClaimParams = StakePendingClaimParams({
+            farm: farm,
+            amount: claimAmount,
+            receiver: user1,
+            claimableTime: claimableTime,
+            claimId: claimId
+        });
+        stakePendingClaim(user1, stakePendingClaimParams);
+
+        // check the shares in reward farm is correct
+        assertEq(farmManager.shares(rewardFarm, user1), claimAmount, "Share is not correct");
+
+        assertEq(farmManager.previewReward(farm, user1), 0, "Preview reward is not correct");
+
+        ClaimStatus claimStatus = farm.getClaimStatus(claimId);
+
+        // cannot stake twice
+        vm.expectRevert(abi.encodeWithSelector(IFarm.InvalidStatusToForceExecuteClaim.selector, claimStatus));
+        stakePendingClaim(user1, stakePendingClaimParams);
+
+        // check the claimId status
+        assert(claimStatus == ClaimStatus.CLAIMED);
+    }
+
+    function test_instantClaim() public {
+        FarmConfig memory farmConfig = farmManager.getFarmConfig(farm);
+
+        deal(address(asset), user1, 100e18);
+
+        uint256 amount = 1e18;
+
+        // deposit and check the share is correct
+        depositERC20(user1, farm, amount, user1);
+
+        uint256 previewReward = farmManager.previewReward(farm, user1);
+
+        vm.warp(farmConfig.claimStartTime + 3 days);
+
+        // try instant claim, should revert
+        InstantClaimParams memory instantClaimParams =
+            InstantClaimParams({ farm: farm, amount: previewReward, receiver: user1 });
+        vm.expectRevert(IFarm.DelayTimeIsNotZero.selector);
+        instantClaim(user1, instantClaimParams);
+
+        // set the delay time to 0
+        vm.startPrank(DEPLOYER);
+        farmConfig = FarmConfig({
+            depositCap: 2000e18,
+            depositCapPerUser: 1000e18,
+            rewardRate: 1000,
+            depositStartTime: uint32(block.timestamp),
+            depositEndTime: uint32(block.timestamp + 60 days),
+            rewardStartTime: uint32(block.timestamp),
+            rewardEndTime: uint32(block.timestamp + 40 days),
+            claimStartTime: uint32(block.timestamp),
+            claimEndTime: uint32(block.timestamp + 60 days),
+            claimDelayTime: 0,
+            withdrawEnabled: true,
+            forceClaimEnabled: true
+        });
+        farmManager.updateFarmConfig(farm, farmConfig);
+        vm.stopPrank();
+
+        // instant claim
+        instantClaim(user1, instantClaimParams);
+
+        // check the balance
+        assertEq(rewardToken.balanceOf(user1), previewReward, "Reward amount is not match");
+
+        // claim twice, claim 0 token
+        instantClaim(user1, instantClaimParams);
+        assertEq(rewardToken.balanceOf(user1), previewReward, "Reward amount is not match");
+    }
+
+    function test_withdraw() public {
+        FarmConfig memory farmConfig = farmManager.getFarmConfig(farm);
+
+        deal(address(asset), user1, 100e18);
+        deal(address(asset), user2, 100e18);
+
+        uint256 amount = 2e18;
+        uint256 withdrawAmount = 1e18;
+
+        // deposit and check the share is correct
+        depositERC20(user1, farm, amount, user1);
+
+        vm.warp(farmConfig.claimStartTime + 1 days);
+
+        // withdraw
+        withdraw(user1, farm, withdrawAmount, user1);
+        assertEq(asset.balanceOf(user1), 100e18 - amount + withdrawAmount, "Reward amount is not match");
+
+        uint256 pendingReward = farmManager.previewReward(farm, user1);
+        uint256 expectedReward = farmConfig.rewardRate * 1 days;
+        assertEq(pendingReward, expectedReward, "Pending reward is not correct");
+
+        // user2 deposits asset
+        depositERC20(user2, farm, amount, user2);
+
+        vm.warp(block.timestamp + 1 days);
+
+        pendingReward = farmManager.previewReward(farm, user1);
+        expectedReward = farmConfig.rewardRate * 1 days + farmConfig.rewardRate * 1 days / 3;
+        assertEq(pendingReward, expectedReward, "Pending reward is not correct");
+
+        // withdraw amount exceeds the shares
+        uint256 shares = farmManager.shares(farm, user1);
+        vm.startPrank(user1);
+        vm.expectRevert(abi.encodeWithSelector(IFarm.AmountExceedsShares.selector, amount, shares));
+        farmManager.withdraw(WithdrawParams({ farm: farm, amount: amount, receiver: user1 }));
         vm.stopPrank();
     }
 }
