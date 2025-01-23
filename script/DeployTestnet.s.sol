@@ -18,7 +18,7 @@ import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/Upgradea
 import { ERC20Mock } from "./testnet/MockERC20.sol";
 import { ArbSepTestnetConfig, BaseSepTestnetConfig, TestnetConfigHelper } from "./testnet/TestnetConfig.sol";
 
-contract DeployTestnet is Script, ArbSepTestnetConfig {
+contract DeployTestnet is Script, BaseSepTestnetConfig {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint256 internal DEPLOYER_PRIVATE_KEY;
     uint256 internal OWNER_PRIVATE_KEY;

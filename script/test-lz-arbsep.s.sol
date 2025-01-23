@@ -106,7 +106,7 @@ contract TestScript is Script, ArbSepTestnetConfig {
         vm.stopBroadcast();
     }
 
-    function showRewardFarmInfo() public {
+    function showRewardFarmInfo() public view {
         (, IFarm rewardFarm,) = farmManager.dstInfo();
         console.log("====== Reward farm ======");
         console.log("Preview reward: %d", rewardFarm.previewReward(deployer));

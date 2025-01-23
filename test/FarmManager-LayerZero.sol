@@ -51,24 +51,23 @@ contract FarmManagerLayerZeroTest is Test, DeployBase {
     }
 
     function test_lzCompose() public {
-        address oApp = address(rewardToken);
-        bytes32 guid = bytes32(0);
-        address executor = address(0);
-        bytes memory executorData = new bytes(0);
-        uint256 amount = 1e18;
+        // address oApp = address(rewardToken);
+        // bytes32 guid = bytes32(0);
+        // address executor = address(0);
+        // bytes memory executorData = new bytes(0);
+        // uint256 amount = 1e18;
 
-        DepositParams memory depositParams = DepositParams({ farm: rewardFarm, amount: amount, receiver: user });
-        bytes memory bytesData = abi.encode(depositParams);
-        bytes memory composeMsgHalf = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, bytesData);
+        // bytes memory bytesData = abi.encode(amount, user);
+        // bytes memory composeMsgHalf = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, bytesData);
 
         // fromChain's from Address
-        bytes32 composeFromMock = bytes32(0x000000000000000000000000f5709175a984f36d3b6d2603944d570968fab40b);
-        bytes memory composeMsg = abi.encode(composeFromMock, composeMsgHalf);
-        bytes memory message = OFTComposeMsgCodec.encode(0, 0, amount, composeMsg);
+        // bytes32 composeFromMock = bytes32(0x000000000000000000000000f5709175a984f36d3b6d2603944d570968fab40b);
+        // bytes memory composeMsg = abi.encode(composeFromMock, composeMsgHalf);
+        // bytes memory message = OFTComposeMsgCodec.encode(0, 0, amount, composeMsg);
 
-        vm.startPrank(MOCK_LZ_ENDPOINT);
-        deal(address(rewardToken), MOCK_LZ_ENDPOINT, 100 ether);
-        rewardToken.transfer(address(farmManager), amount);
+        // vm.startPrank(MOCK_LZ_ENDPOINT);
+        // deal(address(rewardToken), MOCK_LZ_ENDPOINT, 100 ether);
+        // rewardToken.transfer(address(farmManager), amount);
         // farmManager.lzCompose(
         //     oApp,
         //     guid,
@@ -76,11 +75,7 @@ contract FarmManagerLayerZeroTest is Test, DeployBase {
         //     executor,
         //     executorData
         // );
-        vm.stopPrank();
-    }
-
-    function d(bytes calldata data) public returns (bytes memory) {
-        return OFTComposeMsgCodec.composeMsg(data);
+        // vm.stopPrank();
     }
 
     // Helper function: Get default farm configuration

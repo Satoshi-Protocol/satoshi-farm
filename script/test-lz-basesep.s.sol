@@ -50,9 +50,9 @@ contract TestScript is Script, ArbSepTestnetConfig {
 
         // BASE
         rewardToken = IRewardToken(address(0x819591a4e747212EDA0880DD2F171B582Ce4149B));
-        farmManager = IFarmManager(address(0xC919ebb5bcEdff161d15DcD2226D6400aCd2490F));
-        memeAsset = ERC20Mock(address(0x96eb59D09174Efbb1f1A5cF8a522b3AEC64A52E7));
-        memeFarm = IFarm(address(0xd3e3bb7e30a169B9D2F1831d705B0c067628FbD2));
+        farmManager = IFarmManager(address(0xD0B720593fcC19618340F5714693e57bb9a0c31D));
+        memeAsset = ERC20Mock(address(0xdb852D7e63F679ABaa8AF75F3EedF5f500Fa6aef));
+        memeFarm = IFarm(address(0xC57f6A099b1F89754239dd1737aDB3Cb4450170F));
     }
 
     function run() public {
@@ -86,17 +86,20 @@ contract TestScript is Script, ArbSepTestnetConfig {
         uint256 rewardTokenBalance = rewardToken.balanceOf(deployer);
         console.log("Reward token balance: %d", rewardTokenBalance);
 
-        uint256 targetAmt = 2e18;
-        rewardToken.mint(deployer, 2e18);
+        uint256 targetAmt = 3e18;
+        rewardToken.mint(deployer, targetAmt);
 
         /**
          * Manaualy cross chain stake
          */
-        // SendParam memory sendParam = formatDepositLzSendParam(deployer, targetAmt, EXTRA_OPTIONS);
-        // MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
-        // rewardToken.send{ value: expectFee.nativeFee }(sendParam, expectFee, 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2);
-        // uint256 rewardAmt = 1e18;
+        SendParam memory sendParam = formatDepositLzSendParam(deployer, targetAmt, EXTRA_OPTIONS);
+        // console.log("composeMsg");
+        // console.logBytes(sendParam.composeMsg);
 
+        MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
+        rewardToken.send{ value: expectFee.nativeFee }(sendParam, expectFee, 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2);
+
+        // uint256 rewardAmt = 1e18;
         // ClaimAndStakeParams memory claimAndStakeParams = ClaimAndStakeParams({
         //   farm: memeFarm,
         //   amount: 10e18,
@@ -104,14 +107,13 @@ contract TestScript is Script, ArbSepTestnetConfig {
         // });
         // farmManager.claimAndStake(claimAndStakeParams);
 
-        uint256 claimAmt = 3e18;
         ClaimAndStakeCrossChainParams memory claimAndStakeParamsCrossChain = ClaimAndStakeCrossChainParams({
             farm: memeFarm,
-            amount: claimAmt,
+            amount: targetAmt,
             receiver: deployer,
             extraOptions: EXTRA_OPTIONS
         });
-        farmManager.claimAndStakeCrossChain{ value: 455_661_193_185_754 }(claimAndStakeParamsCrossChain);
+        farmManager.claimAndStakeCrossChain{ value: expectFee.nativeFee }(claimAndStakeParamsCrossChain);
 
         vm.stopBroadcast();
     }
@@ -125,9 +127,8 @@ contract TestScript is Script, ArbSepTestnetConfig {
         view
         returns (SendParam memory)
     {
-        (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstFarmManagerBytes32) = farmManager.dstInfo();
-        bytes memory composeMsg =
-            abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(DepositParams(dstRewardFarm, amount, receiver)));
+        (uint32 dstEid,, bytes32 dstFarmManagerBytes32) = farmManager.dstInfo();
+        bytes memory composeMsg = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver));
 
         return SendParam(
             dstEid,

@@ -96,8 +96,8 @@ abstract contract ArbSepTestnetConfig {
 
     DstInfo DST_INFO = DstInfo({
         dstEid: 40_231, // Arbitrum Sepolia chain
-        dstRewardFarm: IFarm(address(0x7Ed4eb4D07b0C2556A0a4F4FC4993EC8c5832E84)),
-        dstFarmManagerBytes32: bytes32(0x0000000000000000000000006df05337f818be2cd87a0e8ee63c5e55d7632b56)
+        dstRewardFarm: IFarm(address(0xa140F9E1d45eb7107Fa9665BA975B3601007B61E)),
+        dstFarmManagerBytes32: bytes32(0x000000000000000000000000d7ee27a2f5a52643bb10c524211808163aff7bd3)
     });
 
     LzConfig LZ_CONFIG = LzConfig({
@@ -112,8 +112,8 @@ abstract contract BaseSepTestnetConfig {
 
     DstInfo DST_INFO = DstInfo({
         dstEid: 40_231, // Arbitrum Sepolia chain
-        dstRewardFarm: IFarm(address(0x7Ed4eb4D07b0C2556A0a4F4FC4993EC8c5832E84)),
-        dstFarmManagerBytes32: bytes32(0x0000000000000000000000006df05337f818be2cd87a0e8ee63c5e55d7632b56)
+        dstRewardFarm: IFarm(address(0xa140F9E1d45eb7107Fa9665BA975B3601007B61E)),
+        dstFarmManagerBytes32: bytes32(0x000000000000000000000000d7ee27a2f5a52643bb10c524211808163aff7bd3)
     });
 
     LzConfig LZ_CONFIG = LzConfig({
