@@ -31,12 +31,12 @@ struct LzConfig {
  * @dev The farm of reward token will be deployed on the destination chain and the only one
  * @param dstEid The destination chain's endpoint id
  * @param dstRewardFarm The destination chain's reward farm
- * @param dstRewardManagerBytes32 The destination chain's reward farm address in bytes32
+ * @param dstFarmManagerBytes32 The destination chain's farm manager address in bytes32
  */
 struct DstInfo {
     uint32 dstEid;
     IFarm dstRewardFarm;
-    bytes32 dstRewardManagerBytes32;
+    bytes32 dstFarmManagerBytes32;
 }
 
 /**
@@ -643,9 +643,9 @@ interface IFarmManager is IOAppComposer {
      * @notice Destination chain's information of the reward farm
      * @return dstEid The destination chain's endpoint id
      * @return dstRewardFarm The destination chain's reward farm
-     * @return dstRewardFarmBytes32 The destination chain's reward farm address in bytes32
+     * @return dstFarmManagerBytes32 The destination chain's farm manager address in bytes32
      */
-    function dstInfo() external view returns (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32);
+    function dstInfo() external view returns (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstFarmManagerBytes32);
 
     /**
      * @notice Update destination chain's information

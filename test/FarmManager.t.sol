@@ -71,7 +71,7 @@ contract FarmManagerTest is BaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(1)));
         DstInfo memory dstInfo =
-            DstInfo({ dstEid: 0, dstRewardFarm: IFarm(address(0)), dstRewardManagerBytes32: bytes32(0) });
+            DstInfo({ dstEid: 0, dstRewardFarm: IFarm(address(0)), dstFarmManagerBytes32: bytes32(0) });
         farmManager.updateDstInfo(dstInfo);
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(1)));

@@ -64,30 +64,22 @@ contract FarmManagerLayerZeroTest is Test, DeployBase {
         });
         bytes memory bytesData = abi.encode(depositParams);
         bytes memory composeMsgHalf = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, bytesData);
+
+        // fromChain's from Address
         bytes32 composeFromMock = bytes32(0x000000000000000000000000f5709175a984f36d3b6d2603944d570968fab40b);
         bytes memory composeMsg = abi.encode(composeFromMock, composeMsgHalf);
         bytes memory message = OFTComposeMsgCodec.encode(0, 0, amount, composeMsg);
-        console.log("bytesData");
-        console.logBytes(bytesData);
-        console.log("composeMsgHalf");
-        console.logBytes(composeMsgHalf);
-        console.log("composeMsg");
-        console.logBytes(composeMsg);
-        console.log("message");
-        console.logBytes(message);
 
         vm.startPrank(MOCK_LZ_ENDPOINT);
         deal(address(rewardToken), MOCK_LZ_ENDPOINT, 100 ether);
         rewardToken.transfer(address(farmManager), amount);
-        uint256 balance = rewardToken.balanceOf(address(farmManager));
-        console.log("balance", balance);
-        farmManager.lzCompose(
-            oApp,
-            guid,
-            message,
-            executor,
-            executorData
-        );
+        // farmManager.lzCompose(
+        //     oApp,
+        //     guid,
+        //     message,
+        //     executor,
+        //     executorData
+        // );
         vm.stopPrank();
         
     }

@@ -117,10 +117,10 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         if (_dstInfo.dstEid == _lzConfig.eid) {
             IFarm farm = _createFarm(IERC20(_rewardToken), _farmConfig);
             _dstInfo.dstRewardFarm = farm;
-            _dstInfo.dstRewardManagerBytes32 = OFTComposeMsgCodec.addressToBytes32(address(this));
+            _dstInfo.dstFarmManagerBytes32 = OFTComposeMsgCodec.addressToBytes32(address(this));
         } else if (_dstInfo.dstEid != 0) {
             _checkIsNotZeroAddress(address(_dstInfo.dstRewardFarm));
-            _checkIsNotZero(uint256(_dstInfo.dstRewardManagerBytes32));
+            _checkIsNotZero(uint256(_dstInfo.dstFarmManagerBytes32));
         } else {
             revert InvalidZeroDstEid();
         }
@@ -153,7 +153,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     /// @inheritdoc IFarmManager
     function updateDstInfo(DstInfo memory _dstInfo) external onlyOwner {
         _checkIsNotZero(uint256(_dstInfo.dstEid));
-        _checkIsNotZero(uint256(_dstInfo.dstRewardManagerBytes32));
+        _checkIsNotZero(uint256(_dstInfo.dstFarmManagerBytes32));
         _checkIsNotZeroAddress(address(_dstInfo.dstRewardFarm));
 
         dstInfo = _dstInfo;
@@ -691,27 +691,26 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     {
         if (_oApp != address(rewardToken)) revert InvalidOApp(_oApp, address(rewardToken));
         if (msg.sender != lzConfig.endpoint) revert InvalidLzEndpoint(msg.sender, lzConfig.endpoint);
-        // Extract the composed message from the delivered message using the MsgCodec
-        // bytes memory composeMsg = OFTComposeMsgCodec.composeMsg(_message);
-        // console.log("composeMsg");
-        // console.logBytes(composeMsg);
+
+        // NOTE: Extract the composed message from the delivered message using the MsgCodec
         (LZ_COMPOSE_OPT opt, bytes memory data) =
             abi.decode(OFTComposeMsgCodec.composeMsg(_message), (LZ_COMPOSE_OPT, bytes));
-        // console.log("opt");
-        // console.logUint(uint8(opt));
-        // console.log("data");
-        // console.logBytes(data);
         if (opt == LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN) {
             uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
-            (DepositParams memory depositParams) = abi.decode(data, (DepositParams));
-            if (_amountLD != depositParams.amount) revert InvalidReceiveAmount(_amountLD, depositParams.amount);
+            (uint256 depositAmount, address receiver) = abi.decode(data, (uint256, address));
+            if (_amountLD != depositAmount) revert InvalidReceiveAmount(_amountLD, depositAmount);
 
             // NOTE: Farm will call this.transferCallback to transfer the reward token to the farm from self
-            rewardToken.approve(address(this), depositParams.amount);
-            dstInfo.dstRewardFarm.depositERC20(depositParams.amount, address(this), depositParams.receiver);
+            rewardToken.approve(address(this), depositAmount);
+            dstInfo.dstRewardFarm.depositERC20(depositAmount, address(this), receiver);
         } else {
             revert InvalidOpt(opt);
         }
+    }
+
+    function adminDeposit(uint256 amount, address receiver) external onlyOwner {
+        rewardToken.approve(address(this), amount);
+        dstInfo.dstRewardFarm.depositERC20(amount, address(this), receiver);
     }
 
     /// @inheritdoc IFarmManager
@@ -725,12 +724,12 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         returns (SendParam memory)
     {
         bytes memory composeMsg = abi.encode(
-            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(DepositParams(dstInfo.dstRewardFarm, amount, receiver))
+            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver)
         );
 
         return SendParam(
             dstInfo.dstEid,
-            dstInfo.dstRewardManagerBytes32,
+            dstInfo.dstFarmManagerBytes32,
             amount,
             amount,
             extraOptions,
