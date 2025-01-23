@@ -103,7 +103,7 @@ abstract contract ArbSepTestnetConfig {
     LzConfig LZ_CONFIG = LzConfig({
         eid: 40_231, // Arbitrum Sepolia chain
         endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
-        refundAddress: 0xD26C9387F92EEa2cD030440A0799E403B225B8dD
+        refundAddress: 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2
     });
 }
 
@@ -119,6 +119,6 @@ abstract contract BaseSepTestnetConfig {
     LzConfig LZ_CONFIG = LzConfig({
         eid: 40_245, // BASE Sepolia chain
         endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
-        refundAddress: 0xD26C9387F92EEa2cD030440A0799E403B225B8dD
+        refundAddress: 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2
     });
 }

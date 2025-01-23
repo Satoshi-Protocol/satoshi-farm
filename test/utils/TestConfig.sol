@@ -9,6 +9,8 @@ import { Test } from "forge-std/Test.sol";
 
 address constant DEPLOYER = 0x1234567890123456789012345678901234567890;
 address constant OWNER = 0x1111111111111111111111111111111111111111;
+address constant MOCK_LZ_ENDPOINT = 0x6EDCE65403992e310A62460808c4b910D972f10f;
+address constant MOCK_REFUND_ADDR = 0x2234567890123456789012345678901234567890;
 
 abstract contract TestConfig {
     FarmConfig internal DEFAULT_REWARD_FARM_CONFIG = FarmConfig({
@@ -41,7 +43,7 @@ abstract contract TestConfig {
         forceClaimEnabled: true
     });
 
-    LzConfig internal DEFAULT_LZ_CONFIG = LzConfig({ eid: 0, endpoint: address(0), refundAddress: address(0) });
+    LzConfig internal DEFAULT_LZ_CONFIG = LzConfig({ eid: 0, endpoint: MOCK_LZ_ENDPOINT, refundAddress: MOCK_REFUND_ADDR });
 
     DstInfo internal DEFAULT_DST_INFO =
         DstInfo({ dstEid: 0, dstRewardFarm: IFarm(address(0)), dstRewardManagerBytes32: bytes32(0) });

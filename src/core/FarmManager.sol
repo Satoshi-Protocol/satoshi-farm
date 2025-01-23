@@ -692,14 +692,22 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         if (_oApp != address(rewardToken)) revert InvalidOApp(_oApp, address(rewardToken));
         if (msg.sender != lzConfig.endpoint) revert InvalidLzEndpoint(msg.sender, lzConfig.endpoint);
         // Extract the composed message from the delivered message using the MsgCodec
+        // bytes memory composeMsg = OFTComposeMsgCodec.composeMsg(_message);
+        // console.log("composeMsg");
+        // console.logBytes(composeMsg);
         (LZ_COMPOSE_OPT opt, bytes memory data) =
             abi.decode(OFTComposeMsgCodec.composeMsg(_message), (LZ_COMPOSE_OPT, bytes));
+        // console.log("opt");
+        // console.logUint(uint8(opt));
+        // console.log("data");
+        // console.logBytes(data);
         if (opt == LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN) {
             uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
             (DepositParams memory depositParams) = abi.decode(data, (DepositParams));
             if (_amountLD != depositParams.amount) revert InvalidReceiveAmount(_amountLD, depositParams.amount);
 
-            rewardToken.approve(address(depositParams.farm), depositParams.amount);
+            // NOTE: Farm will call this.transferCallback to transfer the reward token to the farm from self
+            rewardToken.approve(address(this), depositParams.amount);
             dstInfo.dstRewardFarm.depositERC20(depositParams.amount, address(this), depositParams.receiver);
         } else {
             revert InvalidOpt(opt);
