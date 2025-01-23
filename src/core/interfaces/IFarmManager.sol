@@ -303,6 +303,23 @@ interface IFarmManager is IOAppComposer {
     function createFarm(IERC20 underlyingAsset, FarmConfig memory farmConfig) external returns (address farm);
 
     /**
+     * @notice Recover the native asset
+     * @dev Only the owner can recover the native asset
+     * @dev The function to recover the native asset that unexpectedly left in the contract
+     * @param amount The amount to recover
+     */
+    function recoverNativeAsset(uint256 amount) external;
+
+    /**
+     * @notice Recover the ERC20 token
+     * @dev Only the owner can recover the ERC20 token
+     * @dev The function to recover the ERC20 token that unexpectedly left in the contract
+     * @param token The ERC20 token to recover
+     * @param amount The amount to recover
+     */
+    function recoverERC20(IERC20 token, uint256 amount) external;
+
+    /**
      * @notice Deposit Native Asset with proof
      * @dev Only used if the underlying asset is native asset
      * @dev Only whitelisted users can deposit with proof

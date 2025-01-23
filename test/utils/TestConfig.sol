@@ -43,7 +43,8 @@ abstract contract TestConfig {
         forceClaimEnabled: true
     });
 
-    LzConfig internal DEFAULT_LZ_CONFIG = LzConfig({ eid: 0, endpoint: MOCK_LZ_ENDPOINT, refundAddress: MOCK_REFUND_ADDR });
+    LzConfig internal DEFAULT_LZ_CONFIG =
+        LzConfig({ eid: 0, endpoint: MOCK_LZ_ENDPOINT, refundAddress: MOCK_REFUND_ADDR });
 
     DstInfo internal DEFAULT_DST_INFO =
         DstInfo({ dstEid: 0, dstRewardFarm: IFarm(address(0)), dstFarmManagerBytes32: bytes32(0) });

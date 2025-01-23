@@ -9,21 +9,21 @@ import {
     DepositWithProofParams,
     ExecuteClaimParams,
     IFarmManager,
+    LZ_COMPOSE_OPT,
     RequestClaimParams,
-    WithdrawParams,
-    LZ_COMPOSE_OPT
+    WithdrawParams
 } from "../src/core/interfaces/IFarmManager.sol";
 import { DeployBase } from "./utils/DeployBase.sol";
 
 import { FarmTest } from "./utils/FarmTest.sol";
 
+import { OFTComposeMsgCodec } from "../src/layerzero/OFTComposeMsgCodec.sol";
 import { MerkleLib } from "./utils/MerkleLib.sol";
-import { TestConfig, MOCK_LZ_ENDPOINT, MOCK_REFUND_ADDR } from "./utils/TestConfig.sol";
+import { MOCK_LZ_ENDPOINT, MOCK_REFUND_ADDR, TestConfig } from "./utils/TestConfig.sol";
 import { DEPLOYER, OWNER, TestConfig } from "./utils/TestConfig.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { Test, console } from "forge-std/Test.sol";
 import { MockERC20 } from "solmate/test/utils/mocks/MockERC20.sol";
-import { OFTComposeMsgCodec } from "../src/layerzero/OFTComposeMsgCodec.sol";
 
 contract FarmManagerLayerZeroTest is Test, DeployBase {
     IFarm public farm;
@@ -57,11 +57,7 @@ contract FarmManagerLayerZeroTest is Test, DeployBase {
         bytes memory executorData = new bytes(0);
         uint256 amount = 1e18;
 
-        DepositParams memory depositParams = DepositParams({
-            farm: rewardFarm,
-            amount: amount,
-            receiver: user
-        });
+        DepositParams memory depositParams = DepositParams({ farm: rewardFarm, amount: amount, receiver: user });
         bytes memory bytesData = abi.encode(depositParams);
         bytes memory composeMsgHalf = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, bytesData);
 
@@ -81,13 +77,11 @@ contract FarmManagerLayerZeroTest is Test, DeployBase {
         //     executorData
         // );
         vm.stopPrank();
-        
     }
 
     function d(bytes calldata data) public returns (bytes memory) {
         return OFTComposeMsgCodec.composeMsg(data);
     }
-
 
     // Helper function: Get default farm configuration
     function _getDefaultFarmConfig() internal view returns (FarmConfig memory) {

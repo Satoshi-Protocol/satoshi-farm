@@ -185,6 +185,16 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    function recoverNativeAsset(uint256 amount) external onlyOwner {
+        payable(owner()).transfer(amount);
+    }
+
+    /// @inheritdoc IFarmManager
+    function recoverERC20(IERC20 token, uint256 amount) external onlyOwner {
+        token.safeTransfer(owner(), amount);
+    }
+
+    /// @inheritdoc IFarmManager
     function depositNativeAssetWithProof(DepositWithProofParams memory depositWithProofParams)
         public
         payable
@@ -695,22 +705,25 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         // NOTE: Extract the composed message from the delivered message using the MsgCodec
         (LZ_COMPOSE_OPT opt, bytes memory data) =
             abi.decode(OFTComposeMsgCodec.composeMsg(_message), (LZ_COMPOSE_OPT, bytes));
+
         if (opt == LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN) {
+            _requireNotPaused();
+
             uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
             (uint256 depositAmount, address receiver) = abi.decode(data, (uint256, address));
             if (_amountLD != depositAmount) revert InvalidReceiveAmount(_amountLD, depositAmount);
 
+            IFarm rewardFarm = dstInfo.dstRewardFarm;
+            _checkFarmIsValid(rewardFarm);
+
             // NOTE: Farm will call this.transferCallback to transfer the reward token to the farm from self
             rewardToken.approve(address(this), depositAmount);
-            dstInfo.dstRewardFarm.depositERC20(depositAmount, address(this), receiver);
+            rewardFarm.depositERC20(depositAmount, address(this), receiver);
+
+            emit Deposit(rewardFarm, depositAmount, address(this), receiver);
         } else {
             revert InvalidOpt(opt);
         }
-    }
-
-    function adminDeposit(uint256 amount, address receiver) external onlyOwner {
-        rewardToken.approve(address(this), amount);
-        dstInfo.dstRewardFarm.depositERC20(amount, address(this), receiver);
     }
 
     /// @inheritdoc IFarmManager
@@ -723,9 +736,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         view
         returns (SendParam memory)
     {
-        bytes memory composeMsg = abi.encode(
-            LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver)
-        );
+        bytes memory composeMsg = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver));
 
         return SendParam(
             dstInfo.dstEid,
