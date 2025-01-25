@@ -36,7 +36,7 @@ contract DeploySetupScript is Script, DeployFarmConfig {
 
         vm.stopBroadcast();
 
-        console.log("Deployed contracts:");
+        console.log("Deployed farm:");
         console.log("farm:", address(farm));
     }
 }
