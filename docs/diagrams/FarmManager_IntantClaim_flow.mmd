@@ -1,0 +1,26 @@
+sequenceDiagram
+    title Farm Manager Instant Claim Flow
+    
+    actor User
+    participant FarmManager
+    participant Farm
+    participant RewardToken
+
+    %% Instant Claim Flow
+    rect rgb(220, 220, 255)
+        Note over User,RewardToken: Instant Claim Flow
+        User->>+FarmManager: instantClaim(farm, amount, receiver)
+        
+        FarmManager->>+Farm: instantClaim(amount, owner, receiver)
+        Farm->>Farm: _beforeInstantClaim()
+        Farm->>Farm: _checkIsClaimable()
+        Farm->>Farm: _checkDelayTimeIsZero()
+        Farm->>Farm: _updateReward(owner)
+        
+        Farm->>Farm: _updatePendingReward(owner, amount, false)
+        Farm->>FarmManager: mintRewardCallback(receiver, amount)
+        FarmManager->>RewardToken: mint(receiver, amount)
+        Farm-->>-FarmManager: emit InstantClaimed(amount, owner, receiver)
+        
+        FarmManager-->>-User: return claimAmount
+    end
