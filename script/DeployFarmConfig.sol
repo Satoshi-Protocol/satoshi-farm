@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import { FarmConfig } from "../src/core/interfaces/IFarm.sol";
 
-address constant FARM_MANAGER_ADDRESS = 0x86B9c300d65CcC8Bd9284f5000D69df0EF0fb05E;
-address constant UNDERLYING_ASSET_ADDRESS = 0x59fdaB9956C5Dc85f2b9ceC31551cAb6f9C3897D;
+address constant FARM_MANAGER_ADDRESS = 0xefd8C52b3aF1b142FBCEb7EA0d3cddc82058e3F8;
+address constant UNDERLYING_ASSET_ADDRESS = 0xA5f4422532a06e51f899D74D03b0507184141FCA;
 
 abstract contract DeployFarmConfig {
     FarmConfig internal FARM_CONFIG = FarmConfig({
@@ -19,6 +19,6 @@ abstract contract DeployFarmConfig {
         claimEndTime: type(uint32).max,
         claimDelayTime: 1 days,
         withdrawEnabled: true,
-        forceClaimEnabled: false
+        forceClaimEnabled: true
     });
 }

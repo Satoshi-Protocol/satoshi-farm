@@ -23,13 +23,13 @@ abstract contract DeploySetupConfig {
     });
 
     DstInfo internal DST_INFO = DstInfo({
-        dstEid: 40_245,
-        dstRewardFarm: IFarm(address(0x589c06a481427E8Dfeb6a6066F9a9441e6Ac3965)),
-        dstFarmManagerBytes32: bytes32(uint256(uint160(0x43Ae83295a09117D82835302019159DfAAB6C640)))
+        dstEid: 40_231,
+        dstRewardFarm: IFarm(address(0xfDe4Ba7C4E86C00136DD9E915a4C4e1eE74c6Dad)),
+        dstFarmManagerBytes32: bytes32(uint256(uint160(0x575BEFDE27d08364078eb5409ACdCeAfEaB92e3A)))
     });
 
     LzConfig internal LZ_CONFIG = LzConfig({
-        eid: 40161,
+        eid: 40_161,
         endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
         refundAddress: address(0xf13d1D93563c27b8C7ca4fCA1fcD9114d36139bb)
     });
