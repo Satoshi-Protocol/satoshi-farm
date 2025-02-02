@@ -206,6 +206,7 @@ interface IFarmManager is IOAppComposer {
     error InvalidLzEndpoint(address msgSender, address lzEndpoint);
     error InvalidReceiveAmount(uint256 receiveAmount, uint256 depositAmount);
     error InvalidOpt(LZ_COMPOSE_OPT opt);
+    error TransferNativeAssetFailed(address to, uint256 amount);
 
     event RewardRateUpdated(IFarm farm, uint256 rewardRate);
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);

@@ -186,7 +186,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     /// @inheritdoc IFarmManager
     function recoverNativeAsset(uint256 amount) external onlyOwner {
-        payable(owner()).transfer(amount);
+        address owner = owner();
+        (bool success, ) = owner.call{ value: amount }("");
+        if (!success) revert TransferNativeAssetFailed(owner, amount);
     }
 
     /// @inheritdoc IFarmManager
