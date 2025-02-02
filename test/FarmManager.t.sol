@@ -272,7 +272,7 @@ contract FarmManagerTest is BaseTest {
 
         // claim at invalid time
         vm.startPrank(user1);
-        vm.expectRevert(abi.encodeWithSelector(IFarm.InvalidClaimTime.selector, block.timestamp));
+        vm.expectRevert(abi.encodeWithSelector(IFarm.InvalidClaimTime.selector, block.timestamp, farmConfig.claimStartTime, farmConfig.claimEndTime));
         farmManager.requestClaim(RequestClaimParams({ farm: farm, amount: amount, receiver: user1 }));
         vm.stopPrank();
 
@@ -285,7 +285,7 @@ contract FarmManagerTest is BaseTest {
         vm.warp(farmConfig.claimEndTime + 1 days);
         // claim at invalid time
         vm.startPrank(user1);
-        vm.expectRevert(abi.encodeWithSelector(IFarm.InvalidClaimTime.selector, block.timestamp));
+        vm.expectRevert(abi.encodeWithSelector(IFarm.InvalidClaimTime.selector, block.timestamp, farmConfig.claimStartTime, farmConfig.claimEndTime));
         farmManager.requestClaim(RequestClaimParams({ farm: farm, amount: amount, receiver: user1 }));
         vm.stopPrank();
 
