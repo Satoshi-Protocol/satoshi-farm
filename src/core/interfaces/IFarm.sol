@@ -101,7 +101,12 @@ interface IFarm {
     event Deposit(uint256 indexed amount, address depositor, address receiver);
     event Withdraw(uint256 indexed amount, address owner, address receiver);
     event ClaimRequested(
-        bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimableTime
+        bytes32 indexed claimId,
+        uint256 indexed amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        uint256 nonce
     );
     event ClaimExecuted(
         bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
@@ -208,6 +213,7 @@ interface IFarm {
      * @param receiver The address of the receiver
      * @return claimAmt The actual claim amount requested
      * @return claimableTime The claimable time
+     * @return nonce The nonce
      * @return claimId The claim id
      */
     function requestClaim(
@@ -216,7 +222,7 @@ interface IFarm {
         address receiver
     )
         external
-        returns (uint256 claimAmt, uint256 claimableTime, bytes32 claimId);
+        returns (uint256 claimAmt, uint256 claimableTime, uint256 nonce, bytes32 claimId);
 
     /**
      * @notice Execute claim reward token
@@ -224,6 +230,7 @@ interface IFarm {
      * @param owner The address of the owner
      * @param receiver The address of the receiver
      * @param claimableTime The claimable time
+     * @param nonce The nonce
      * @param claimId The claim id
      */
     function executeClaim(
@@ -231,6 +238,7 @@ interface IFarm {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         external;
@@ -242,6 +250,7 @@ interface IFarm {
      * @param owner The address of the owner
      * @param receiver The address of the receiver
      * @param claimableTime The claimable time
+     * @param nonce The nonce
      * @param claimId The claim id
      */
     function forceExecuteClaim(
@@ -249,6 +258,7 @@ interface IFarm {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         external;
@@ -326,6 +336,13 @@ interface IFarm {
      * @return claimStatus The claim status
      */
     function getClaimStatus(bytes32 claimId) external view returns (ClaimStatus claimStatus);
+
+    /**
+     * @notice Get nonce for the address
+     * @param addr The address
+     * @return nonce The nonce for the address
+     */
+    function getNonce(address addr) external view returns (uint256);
 
     /**
      * @notice The claim function is open

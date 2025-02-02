@@ -96,6 +96,7 @@ struct RequestClaimParams {
  * @param owner The owner of the claim
  * @param receiver The receiver of the claim
  * @param claimableTime The claimable time of the claim
+ * @param nonce The nonce of the claim
  * @param claimId The id of the claim
  */
 struct ExecuteClaimParams {
@@ -104,6 +105,7 @@ struct ExecuteClaimParams {
     address owner;
     address receiver;
     uint256 claimableTime;
+    uint256 nonce;
     bytes32 claimId;
 }
 
@@ -114,6 +116,7 @@ struct ExecuteClaimParams {
  * @param amount The amount to stake
  * @param receiver The receiver of the stake
  * @param claimableTime The claimable time of the claim
+ * @param nonce The nonce of the claim
  * @param claimId The id of the claim
  */
 struct StakePendingClaimParams {
@@ -121,6 +124,7 @@ struct StakePendingClaimParams {
     uint256 amount;
     address receiver;
     uint256 claimableTime;
+    uint256 nonce;
     bytes32 claimId;
 }
 
@@ -131,6 +135,7 @@ struct StakePendingClaimParams {
  * @param amount The amount of pending claim
  * @param receiver The receiver of the pending claim
  * @param claimableTime The claimable time of the pending claim
+ * @param nonce The nonce of the pending claim
  * @param claimId The id of the pending claim
  * @param extraOptions The extra options for L0 cross chain
  */
@@ -139,6 +144,7 @@ struct StakePendingClaimCrossChainParams {
     uint256 amount;
     address receiver;
     uint256 claimableTime;
+    uint256 nonce;
     bytes32 claimId;
     bytes extraOptions;
 }
@@ -225,6 +231,7 @@ interface IFarmManager is IOAppComposer {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 indexed claimId
     );
     event ClaimExecuted(
@@ -233,6 +240,7 @@ interface IFarmManager is IOAppComposer {
         address owner,
         address receiver,
         uint256 claimedTime,
+        uint256 nonce,
         bytes32 indexed claimId
     );
     event PendingClaimStaked(
@@ -241,6 +249,7 @@ interface IFarmManager is IOAppComposer {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 indexed claimId
     );
     event ClaimAndStake(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
@@ -600,6 +609,14 @@ interface IFarmManager is IOAppComposer {
      * @return pendingReward The pending reward of the user
      */
     function getPendingReward(IFarm farm, address addr) external view returns (uint256 pendingReward);
+
+    /**
+     * @notice Get the nonce of the user
+     * @param farm The farm to query
+     * @param addr The user address
+     * @return nonce The nonce of the user
+     */
+    function getNonce(IFarm farm, address addr) external view returns (uint256);
 
     /**
      * @notice Deposit is enabled or not

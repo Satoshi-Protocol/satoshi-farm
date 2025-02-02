@@ -46,6 +46,8 @@ contract Farm is IFarm, Initializable {
     mapping(address => uint256) internal _lastUserRewardPerToken;
     /// pending rewards mapping (user => pendingRewards)
     mapping(address => uint256) internal _pendingRewards;
+    // claim request nonce mapping (owner => nonce)
+    mapping(address => uint256) internal _nonces;
     /// claim status mapping (claimId => ClaimStatus)
     /// claimId = keccak256(amount, owner, receiver, claimableTime)
     mapping(bytes32 /* claimId */ => ClaimStatus) internal _claimStatus;
@@ -209,13 +211,14 @@ contract Farm is IFarm, Initializable {
     )
         external
         onlyFarmManager
-        returns (uint256, uint256, bytes32)
+        returns (uint256, uint256, uint256, bytes32)
     {
         _beforeRequestClaim(amount, owner, receiver);
 
-        (uint256 claimAmt, uint256 claimableTime, bytes32 claimId) = _requestClaim(amount, owner, receiver);
+        (uint256 claimAmt, uint256 claimableTime, uint256 nonce, bytes32 claimId) =
+            _requestClaim(amount, owner, receiver);
 
-        return (claimAmt, claimableTime, claimId);
+        return (claimAmt, claimableTime, nonce, claimId);
     }
 
     /// @inheritdoc IFarm
@@ -224,12 +227,13 @@ contract Farm is IFarm, Initializable {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         external
         onlyFarmManager
     {
-        _beforeExecuteClaim(amount, owner, receiver, claimableTime, claimId);
+        _beforeExecuteClaim(amount, owner, receiver, claimableTime, nonce, claimId);
 
         _executeClaim(amount, owner, receiver, claimableTime, claimId);
     }
@@ -240,12 +244,13 @@ contract Farm is IFarm, Initializable {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         external
         onlyFarmManager
     {
-        _beforeForceExecuteClaim(amount, owner, receiver, claimableTime, claimId);
+        _beforeForceExecuteClaim(amount, owner, receiver, claimableTime, nonce, claimId);
 
         _forceExecuteClaim(amount, owner, receiver, claimableTime, claimId);
     }
@@ -307,6 +312,11 @@ contract Farm is IFarm, Initializable {
     /// @inheritdoc IFarm
     function getPendingReward(address addr) external view returns (uint256) {
         return _pendingRewards[addr];
+    }
+
+    /// @inheritdoc IFarm
+    function getNonce(address addr) external view returns (uint256) {
+        return _nonces[addr];
     }
 
     /// @inheritdoc IFarm
@@ -481,7 +491,7 @@ contract Farm is IFarm, Initializable {
         address receiver
     )
         internal
-        returns (uint256, uint256, bytes32)
+        returns (uint256, uint256, uint256, bytes32)
     {
         uint256 pendingRewards = _pendingRewards[owner];
         if (amount > pendingRewards) {
@@ -492,17 +502,19 @@ contract Farm is IFarm, Initializable {
         if (pendingRewards == 0) revert ZeroPendingRewards();
 
         uint256 claimableTime = block.timestamp + farmConfig.claimDelayTime;
-        bytes32 claimId = keccak256(abi.encode(amount, owner, receiver, claimableTime));
+        uint256 nonce = _nonces[owner];
+        bytes32 claimId = _calcClaimId(amount, owner, receiver, claimableTime, nonce);
         ClaimStatus claimStatus = _claimStatus[claimId];
         if (claimStatus != ClaimStatus.NONE) revert InvalidStatusToRequestClaim(claimStatus);
 
         // update state
         _updatePendingReward(owner, amount, false);
         _claimStatus[claimId] = ClaimStatus.PENDING;
+        _nonces[owner] += 1;
 
-        emit ClaimRequested(claimId, amount, owner, receiver, claimableTime);
+        emit ClaimRequested(claimId, amount, owner, receiver, claimableTime, nonce);
 
-        return (amount, claimableTime, claimId);
+        return (amount, claimableTime, nonce, claimId);
     }
 
     /**
@@ -511,6 +523,7 @@ contract Farm is IFarm, Initializable {
      * @param owner The owner address
      * @param receiver The receiver address
      * @param claimableTime The claimable time
+     * @param nonce The nonce
      * @param claimId The claim ID
      */
     function _beforeExecuteClaim(
@@ -518,13 +531,14 @@ contract Farm is IFarm, Initializable {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         internal
     {
         _checkIsClaimable();
 
-        _checkClaimId(amount, owner, receiver, claimableTime, claimId);
+        _checkClaimId(amount, owner, receiver, claimableTime, nonce, claimId);
 
         _updateReward(owner);
 
@@ -571,6 +585,7 @@ contract Farm is IFarm, Initializable {
      * @param owner The owner address
      * @param receiver The receiver address
      * @param claimableTime The claimable time
+     * @param nonce The nonce
      * @param claimId The claim ID
      */
     function _beforeForceExecuteClaim(
@@ -578,6 +593,7 @@ contract Farm is IFarm, Initializable {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         internal
@@ -587,7 +603,7 @@ contract Farm is IFarm, Initializable {
 
         _checkIsForceClaimEnabled();
 
-        _checkClaimId(amount, owner, receiver, claimableTime, claimId);
+        _checkClaimId(amount, owner, receiver, claimableTime, nonce, claimId);
 
         ClaimStatus claimStatus = _claimStatus[claimId];
 
@@ -798,6 +814,7 @@ contract Farm is IFarm, Initializable {
      * @param owner The owner address
      * @param receiver The receiver address
      * @param claimableTime The claimable time
+     * @param nonce The nonce
      * @param claimId The claim ID
      */
     function _checkClaimId(
@@ -805,12 +822,13 @@ contract Farm is IFarm, Initializable {
         address owner,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         internal
         pure
     {
-        bytes32 expectedClaimId = keccak256(abi.encode(amount, owner, receiver, claimableTime));
+        bytes32 expectedClaimId = _calcClaimId(amount, owner, receiver, claimableTime, nonce);
         if (claimId != expectedClaimId) revert InvalidClaimId(claimId, expectedClaimId);
     }
 
@@ -820,19 +838,21 @@ contract Farm is IFarm, Initializable {
      * @param owner The owner address
      * @param receiver The receiver address
      * @param claimableTime The claimable time
+     * @param nonce The nonce
      * @return The claim ID
      */
     function _calcClaimId(
         uint256 amount,
         address owner,
         address receiver,
-        uint256 claimableTime
+        uint256 claimableTime,
+        uint256 nonce
     )
         internal
         pure
         returns (bytes32)
     {
-        return keccak256(abi.encode(amount, owner, receiver, claimableTime));
+        return keccak256(abi.encode(amount, owner, receiver, claimableTime, nonce));
     }
 
     /**

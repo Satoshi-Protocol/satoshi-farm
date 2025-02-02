@@ -198,18 +198,27 @@ contract FarmTest is Test {
         vm.stopPrank();
     }
 
-    function requestClaim(address user, RequestClaimParams memory params) public returns (uint256, uint256, bytes32) {
+    function requestClaim(
+        address user,
+        RequestClaimParams memory params
+    )
+        public
+        returns (uint256, uint256, uint256, bytes32)
+    {
         vm.startPrank(user);
+        uint256 nonce = params.farm.getNonce(user);
         (uint256 claimableTime, bytes32 claimId) =
-            _prepareClaimId(params.farm, params.amount, user, params.receiver, block.timestamp);
+            _prepareClaimId(params.farm, params.amount, user, params.receiver, block.timestamp, nonce);
 
         vm.expectEmit(true, true, true, true);
-        emit IFarmManager.ClaimRequested(params.farm, params.amount, user, params.receiver, claimableTime, claimId);
+        emit IFarmManager.ClaimRequested(
+            params.farm, params.amount, user, params.receiver, claimableTime, nonce, claimId
+        );
         farmManager.requestClaim(params);
 
         vm.stopPrank();
 
-        return (params.amount, claimableTime, claimId);
+        return (params.amount, claimableTime, nonce, claimId);
     }
 
     function executeClaim(address user, ExecuteClaimParams memory params) public {
@@ -217,7 +226,7 @@ contract FarmTest is Test {
 
         vm.expectEmit(true, true, true, true);
         emit IFarmManager.ClaimExecuted(
-            params.farm, params.amount, user, params.owner, params.claimableTime, params.claimId
+            params.farm, params.amount, user, params.owner, params.claimableTime, params.nonce, params.claimId
         );
 
         farmManager.executeClaim(params);
@@ -239,7 +248,8 @@ contract FarmTest is Test {
         uint256 amount,
         address owner,
         address receiver,
-        uint256 currentTime
+        uint256 currentTime,
+        uint256 nonce
     )
         internal
         view
@@ -247,7 +257,7 @@ contract FarmTest is Test {
     {
         (,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
         uint256 claimableTime = currentTime + claimDelayTime;
-        return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime)));
+        return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime, nonce)));
     }
 
     function _getBalance(IERC20 token, address user) internal view returns (uint256) {

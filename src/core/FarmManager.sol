@@ -333,8 +333,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        (uint256 claimAmt, uint256 claimableTime, bytes32 claimId) = farm.requestClaim(amount, msg.sender, receiver);
-        emit ClaimRequested(farm, claimAmt, msg.sender, receiver, claimableTime, claimId);
+        (uint256 claimAmt, uint256 claimableTime, uint256 nonce, bytes32 claimId) =
+            farm.requestClaim(amount, msg.sender, receiver);
+        emit ClaimRequested(farm, claimAmt, msg.sender, receiver, claimableTime, nonce, claimId);
     }
 
     /// @inheritdoc IFarmManager
@@ -346,19 +347,28 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     /// @inheritdoc IFarmManager
     function executeClaim(ExecuteClaimParams memory executeClaimParams) public whenNotPaused {
-        (IFarm farm, uint256 amount, address owner, address receiver, uint256 claimableTime, bytes32 claimId) = (
+        (
+            IFarm farm,
+            uint256 amount,
+            address owner,
+            address receiver,
+            uint256 claimableTime,
+            uint256 nonce,
+            bytes32 claimId
+        ) = (
             executeClaimParams.farm,
             executeClaimParams.amount,
             executeClaimParams.owner,
             executeClaimParams.receiver,
             executeClaimParams.claimableTime,
+            executeClaimParams.nonce,
             executeClaimParams.claimId
         );
 
         _checkFarmIsValid(farm);
 
-        farm.executeClaim(amount, owner, receiver, claimableTime, claimId);
-        emit ClaimExecuted(farm, amount, owner, receiver, claimableTime, claimId);
+        farm.executeClaim(amount, owner, receiver, claimableTime, nonce, claimId);
+        emit ClaimExecuted(farm, amount, owner, receiver, claimableTime, nonce, claimId);
     }
 
     /// @inheritdoc IFarmManager
@@ -374,23 +384,24 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         whenNotPaused
         onlyDstEidIsCurrentChain
     {
-        (IFarm farm, uint256 amount, address receiver, uint256 claimableTime, bytes32 claimId) = (
+        (IFarm farm, uint256 amount, address receiver, uint256 claimableTime, uint256 nonce, bytes32 claimId) = (
             stakePendingClaimParams.farm,
             stakePendingClaimParams.amount,
             stakePendingClaimParams.receiver,
             stakePendingClaimParams.claimableTime,
+            stakePendingClaimParams.nonce,
             stakePendingClaimParams.claimId
         );
         _checkFarmIsValid(farm);
 
-        farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, claimId);
+        farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, nonce, claimId);
 
         DepositParams memory depositParams =
             DepositParams({ farm: dstInfo.dstRewardFarm, amount: amount, receiver: receiver });
 
         _stake(depositParams);
 
-        emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
+        emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, nonce, claimId);
     }
 
     /// @inheritdoc IFarmManager
@@ -416,6 +427,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             uint256 amount,
             address receiver,
             uint256 claimableTime,
+            uint256 nonce,
             bytes32 claimId,
             bytes memory extraOptions
         ) = (
@@ -423,16 +435,17 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             stakePendingClaimCrossChainParams.amount,
             stakePendingClaimCrossChainParams.receiver,
             stakePendingClaimCrossChainParams.claimableTime,
+            stakePendingClaimCrossChainParams.nonce,
             stakePendingClaimCrossChainParams.claimId,
             stakePendingClaimCrossChainParams.extraOptions
         );
         _checkFarmIsValid(farm);
 
-        farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, claimId);
+        farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, nonce, claimId);
 
         _stakeCrossChain(receiver, amount, extraOptions, msg.value);
 
-        emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, claimId);
+        emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, nonce, claimId);
     }
 
     /// @inheritdoc IFarmManager
@@ -621,6 +634,11 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     /// @inheritdoc IFarmManager
     function getPendingReward(IFarm farm, address addr) external view returns (uint256) {
         return farm.getPendingReward(addr);
+    }
+
+    /// @inheritdoc IFarmManager
+    function getNonce(IFarm farm, address addr) external view returns (uint256) {
+        return farm.getNonce(addr);
     }
 
     /// @inheritdoc IFarmManager

@@ -102,7 +102,7 @@ contract FarmManagerERC20FuzzTest is Test, DeployBase {
         vm.warp(block.timestamp + 1 days);
 
         // Request claim
-        (uint256 claimAmt, uint256 claimableTime, bytes32 claimId) =
+        (uint256 claimAmt, uint256 claimableTime, uint256 nonce, bytes32 claimId) =
             farmTest.requestClaim(user, RequestClaimParams({ farm: farm, amount: depositAmount, receiver: user }));
 
         // Wait for delay period
@@ -117,6 +117,7 @@ contract FarmManagerERC20FuzzTest is Test, DeployBase {
                 owner: user,
                 receiver: user,
                 claimableTime: claimableTime,
+                nonce: nonce,
                 claimId: claimId
             })
         );
