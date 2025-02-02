@@ -73,7 +73,7 @@ interface IFarm {
     error AmountExceedsShares(uint256 amount, uint256 shares);
     error InvalidFarmManager(address caller);
     error AssetBalanceChangedUnexpectedly(uint256 expected, uint256 actual);
-    error InvalidClaimTime(uint256 currentTime);
+    error InvalidClaimTime(uint256 currentTime, uint256 claimStartTime, uint256 claimEndTime);
     error ClaimIsNotReady(uint256 claimableTime, uint256 currentTime);
     error AlreadyClaimed();
     error InvalidClaimId(bytes32 claimId, bytes32 expectedClaimId);

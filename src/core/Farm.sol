@@ -334,7 +334,7 @@ contract Farm is IFarm, Initializable {
      * @notice Check if claim is claimable
      */
     function _checkIsClaimable() internal view {
-        if (!_isClaimable()) revert InvalidClaimTime(block.timestamp);
+        if (!_isClaimable()) revert InvalidClaimTime(block.timestamp, farmConfig.claimStartTime, farmConfig.claimEndTime);
     }
 
     /**
