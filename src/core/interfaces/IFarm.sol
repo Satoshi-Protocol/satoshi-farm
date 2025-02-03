@@ -114,9 +114,9 @@ interface IFarm {
     event ForceClaimExecuted(bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver);
     event ForceClaimed(uint256 indexed amount, address owner, address receiver);
     event InstantClaimed(uint256 indexed amount, address owner, address receiver);
-    event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add, uint256 timestamp);
-    event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
-    event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken, uint256 lastUpdateTime);
+    event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add);
+    event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken);
+    event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken);
     event WhitelistConfigUpdated(WhitelistConfig whitelistConfig);
 
     /**

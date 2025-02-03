@@ -780,7 +780,7 @@ contract Farm is IFarm, Initializable {
     function _updateLastRewardPerToken(uint256 rewardPerToken) internal {
         _lastRewardPerToken = rewardPerToken;
         _lastUpdateTime = block.timestamp;
-        emit LastRewardPerTokenUpdated(rewardPerToken, block.timestamp);
+        emit LastRewardPerTokenUpdated(rewardPerToken);
     }
 
     /**
@@ -790,7 +790,7 @@ contract Farm is IFarm, Initializable {
      */
     function _updateLastUserRewardPerToken(address addr, uint256 rewardPerToken) internal {
         _lastUserRewardPerToken[addr] = rewardPerToken;
-        emit UserRewardPerTokenUpdated(addr, rewardPerToken, block.timestamp);
+        emit UserRewardPerTokenUpdated(addr, rewardPerToken);
     }
 
     /**
@@ -805,7 +805,7 @@ contract Farm is IFarm, Initializable {
         } else {
             _pendingRewards[addr] -= amount;
         }
-        emit PendingRewardUpdated(addr, amount, add, block.timestamp);
+        emit PendingRewardUpdated(addr, amount, add);
     }
 
     /**
