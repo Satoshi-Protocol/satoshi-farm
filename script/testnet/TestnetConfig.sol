@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import { Script, console } from "forge-std/Script.sol";
 import { FarmConfig, IFarm } from "../../src/core/interfaces/IFarm.sol";
 import { MerkleLib } from "../../test/utils/MerkleLib.sol";
 
-import { DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
+import { LZ_COMPOSE_OPT, DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
+import { IOFT, MessagingFee, SendParam } from "../../src/layerzero/IOFT.sol";
+
+import { ERC20Mock } from "./MockERC20.sol";
+import {OFTComposeMsgCodec} from "../../src/layerzero/OFTComposeMsgCodec.sol";
 
 library TestnetConfigHelper {
     function prepareMerkleProof(bytes32[] memory whitelist, uint256 index) public pure returns (bytes32[] memory) {
@@ -27,13 +32,13 @@ library TestnetConfigHelper {
             depositCap: 10_000 ether,
             depositCapPerUser: 500 ether,
             depositStartTime: uint32(block.timestamp),
-            depositEndTime: uint32(block.timestamp + 30 days),
-            rewardRate: 28935185185185184,
+            depositEndTime: type(uint32).max,
+            rewardRate: 28_935_185_185_185_184,
             rewardStartTime: uint32(block.timestamp),
-            rewardEndTime: uint32(block.timestamp + 30 days),
+            rewardEndTime: type(uint32).max,
             claimStartTime: uint32(block.timestamp),
-            claimEndTime: uint32(block.timestamp + 60 days),
-            claimDelayTime: 5 minutes,
+            claimEndTime: type(uint32).max,
+            claimDelayTime: 20 minutes,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });
@@ -44,13 +49,13 @@ library TestnetConfigHelper {
             depositCap: type(uint256).max,
             depositCapPerUser: type(uint256).max,
             depositStartTime: uint32(block.timestamp),
-            depositEndTime: uint32(block.timestamp + 30 days),
-            rewardRate: 28935185185185184,
+            depositEndTime: type(uint32).max,
+            rewardRate: 28_935_185_185_185_184,
             rewardStartTime: uint32(block.timestamp),
-            rewardEndTime: uint32(block.timestamp + 30 days),
+            rewardEndTime: type(uint32).max,
             claimStartTime: uint32(block.timestamp),
-            claimEndTime: uint32(block.timestamp + 60 days),
-            claimDelayTime: 5 minutes,
+            claimEndTime: type(uint32).max,
+            claimDelayTime: 20 minutes,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });
@@ -61,13 +66,13 @@ library TestnetConfigHelper {
             depositCap: type(uint256).max,
             depositCapPerUser: type(uint256).max,
             depositStartTime: uint32(block.timestamp),
-            depositEndTime: uint32(block.timestamp + 30 days),
-            rewardRate: 28935185185185184,
+            depositEndTime: type(uint32).max,
+            rewardRate: 28_935_185_185_185_184,
             rewardStartTime: uint32(block.timestamp),
-            rewardEndTime: uint32(block.timestamp + 30 days),
+            rewardEndTime: type(uint32).max,
             claimStartTime: uint32(block.timestamp),
-            claimEndTime: uint32(block.timestamp + 60 days),
-            claimDelayTime: 5 minutes,
+            claimEndTime: type(uint32).max,
+            claimDelayTime: 20 minutes,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });
@@ -78,27 +83,27 @@ library TestnetConfigHelper {
             depositCap: type(uint256).max,
             depositCapPerUser: type(uint256).max,
             depositStartTime: uint32(block.timestamp),
-            depositEndTime: uint32(block.timestamp + 30 days),
-            rewardRate: 5208333333333333,
+            depositEndTime: type(uint32).max,
+            rewardRate: 5_208_333_333_333_333,
             rewardStartTime: uint32(block.timestamp),
-            rewardEndTime: uint32(block.timestamp + 30 days),
+            rewardEndTime: type(uint32).max,
             claimStartTime: uint32(block.timestamp),
-            claimEndTime: uint32(block.timestamp + 60 days),
-            claimDelayTime: 5 minutes,
-            withdrawEnabled: true,
-            forceClaimEnabled: true
+            claimEndTime: type(uint32).max,
+            claimDelayTime: 20 minutes,
+            withdrawEnabled: false,
+            forceClaimEnabled: false
         });
     }
 }
 
 abstract contract ArbSepTestnetConfig {
-    address constant REWARD_TOKEN_ADDRESS = address(0x1e1d7C76Bd273d60E756322A8Ea9A1914327fa13);
-    string constant MEME_TOKEN_SYMBOL = "Ai16z";
+    address constant REWARD_TOKEN_ADDRESS = address(0x677a4016F631fEDcfC49495998A2d646C9E61943);
+    string constant MEME_TOKEN_SYMBOL = "TRX";
 
     DstInfo DST_INFO = DstInfo({
-        dstEid: 40332, // Arbitrum Sepolia chain
-        dstRewardFarm: IFarm(address(0xB90333dDF932D7B1Ea3ea4F4f5C47E5B1ed00213)),
-        dstFarmManagerBytes32: bytes32(0x00000000000000000000000029a2e39aee8941e5d59568e9a981c3b21ffce1ee)
+        dstEid: 40_245,
+        dstRewardFarm: IFarm(address(0x132aCdCffCF924c792945B93DE2c27f367F2B081)),
+        dstFarmManagerBytes32: bytes32(0x0000000000000000000000005dcd7d96792e10ad32f4862dc9d7d57a378a0f35)
     });
 
     LzConfig LZ_CONFIG = LzConfig({
@@ -109,17 +114,35 @@ abstract contract ArbSepTestnetConfig {
 }
 
 abstract contract BaseSepTestnetConfig {
-    address constant REWARD_TOKEN_ADDRESS = address(0x819591a4e747212EDA0880DD2F171B582Ce4149B);
-    string constant MEME_TOKEN_SYMBOL = "Ai16z";
+    address constant REWARD_TOKEN_ADDRESS = address(0x8d86D4D688c0584c5C13D66cc85199EC1c587B4c);
+    string constant MEME_TOKEN_SYMBOL = "CRV";
 
     DstInfo DST_INFO = DstInfo({
-        dstEid: 40332, // Arbitrum Sepolia chain
-        dstRewardFarm: IFarm(address(0xB90333dDF932D7B1Ea3ea4F4f5C47E5B1ed00213)),
-        dstFarmManagerBytes32: bytes32(0x00000000000000000000000029a2e39aee8941e5d59568e9a981c3b21ffce1ee)
+        dstEid: 40_245,
+        dstRewardFarm: IFarm(address(0x132aCdCffCF924c792945B93DE2c27f367F2B081)),
+        dstFarmManagerBytes32: bytes32(0x0000000000000000000000005dcd7d96792e10ad32f4862dc9d7d57a378a0f35)
     });
 
     LzConfig LZ_CONFIG = LzConfig({
         eid: 40_245, // BASE Sepolia chain
+        endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
+        refundAddress: 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2
+    });
+}
+
+
+abstract contract SepoliaTestnetConfig {
+    address constant REWARD_TOKEN_ADDRESS = address(0xEb655511b444d0f9eb78ABc6fb7EdFc238d0c7F1);
+    string constant MEME_TOKEN_SYMBOL = "HYPE";
+
+    DstInfo DST_INFO = DstInfo({
+        dstEid: 40_245,
+        dstRewardFarm: IFarm(address(0x132aCdCffCF924c792945B93DE2c27f367F2B081)),
+        dstFarmManagerBytes32: bytes32(0x0000000000000000000000005dcd7d96792e10ad32f4862dc9d7d57a378a0f35)
+    });
+
+    LzConfig LZ_CONFIG = LzConfig({
+        eid: 40161, // BASE Sepolia chain
         endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
         refundAddress: 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2
     });
@@ -131,7 +154,7 @@ abstract contract HyperliquidTestnetConfig {
     string constant MEME_TOKEN_SYMBOL = "HYPE";
 
     DstInfo DST_INFO = DstInfo({
-        dstEid: 40332, // Arbitrum Sepolia chain
+        dstEid: 40_245, // Arbitrum Sepolia chain
         dstRewardFarm: IFarm(address(0)),
         dstFarmManagerBytes32: bytes32(0)
     });
@@ -147,4 +170,75 @@ abstract contract HyperliquidTestnetConfig {
         endpoint: address(0x6Ac7bdc07A0583A362F1497252872AE6c0A5F5B8),
         refundAddress: 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2
     });
+}
+
+abstract contract TestScriptConfig {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    ERC20Mock memeAsset;
+    IFarm memeFarm;
+    IFarmManager farmManager;
+    IRewardToken rewardToken;
+    address public owner;
+
+    bytes constant EXTRA_OPTIONS =
+        hex"00030100110100000000000000000000000000030d40010013030000000000000000000000000000002dc6c0";
+    //   bytes constant EXTRA_OPTIONS_LOW_GAS = hex"00030100110100000000000000000000000000030d4001001303000000000000000000000000000000004e20";
+
+    function showRewardFarmInfo() public view {
+        (, IFarm rewardFarm,) = farmManager.dstInfo();
+        console.log("====== Reward farm ======");
+        console.log("Preview reward: %d", rewardFarm.previewReward(owner));
+        console.log("Total shares: %d", rewardFarm.totalShares());
+        console.log("Shares: %d", rewardFarm.shares(owner));
+        console.log("Last reward per token: %d", rewardFarm.lastRewardPerToken());
+        console.log("Pending reward: %d", farmManager.getPendingReward(rewardFarm, owner));
+        console.log("Is claimable: %d", farmManager.isClaimable(rewardFarm));
+    }
+
+    function formatDepositLzSendParam(
+        address receiver,
+        uint256 amount,
+        bytes memory extraOptions
+    )
+        public
+        view
+        returns (SendParam memory)
+    {
+        (uint32 dstEid, , bytes32 dstFarmManagerBytes32) = farmManager.dstInfo();
+        bytes memory composeMsg =
+            abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver));
+
+        return SendParam(
+            dstEid,
+            dstFarmManagerBytes32,
+            amount,
+            amount,
+            extraOptions,
+            composeMsg,
+            "" // oftCmd
+        );
+    }
+
+    function formatSimpleSendParam(
+        uint32 dstEid,
+        address receiver,
+        uint256 amount,
+        bytes memory extraOptions
+    )
+        public
+        view
+        returns (SendParam memory)
+    {
+
+        return SendParam(
+            dstEid,
+            OFTComposeMsgCodec.addressToBytes32(receiver),
+            amount,
+            amount,
+            extraOptions,
+            "",
+            "" // oftCmd
+        );
+    }
 }

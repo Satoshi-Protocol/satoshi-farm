@@ -16,9 +16,10 @@ import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import { ERC20Mock } from "./testnet/MockERC20.sol";
-import { ArbSepTestnetConfig, BaseSepTestnetConfig, TestnetConfigHelper } from "./testnet/TestnetConfig.sol";
+import { HyperliquidTestnetConfig, ArbSepTestnetConfig, BaseSepTestnetConfig, SepoliaTestnetConfig, TestnetConfigHelper } from "./testnet/TestnetConfig.sol";
+// import { ComposeTest } from "../src/ComposeTest.sol";
 
-contract DeployTestnet is Script, BaseSepTestnetConfig {
+contract DeployTestnet is Script, ArbSepTestnetConfig {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint256 internal DEPLOYER_PRIVATE_KEY;
     uint256 internal OWNER_PRIVATE_KEY;
@@ -32,15 +33,15 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
     IFarmManager farmManager;
 
     function setUp() public {
-        DEPLOYER_PRIVATE_KEY = uint256(vm.envBytes32("DEPLOYER_PRIVATE_KEY"));
+        DEPLOYER_PRIVATE_KEY = 0x1a978a4c18fa639d73c8aa9a289ac9a30eeadc1b7ccdfa7ddf128f280686e1c0; // uint256(vm.envBytes32("DEPLOYER_PRIVATE_KEY"));
         deployer = vm.addr(DEPLOYER_PRIVATE_KEY);
-        OWNER_PRIVATE_KEY = uint256(vm.envBytes32("OWNER_PRIVATE_KEY"));
+        OWNER_PRIVATE_KEY = 0x1a978a4c18fa639d73c8aa9a289ac9a30eeadc1b7ccdfa7ddf128f280686e1c0; // uint256(vm.envBytes32("OWNER_PRIVATE_KEY"));
         owner = vm.addr(OWNER_PRIVATE_KEY);
     }
 
     function run() public {
         vm.startBroadcast(DEPLOYER_PRIVATE_KEY);
-
+        console.log("deployer: %s", deployer);
         // deploy implementation contracts
         assert(farmImpl == IFarm(address(0)));
         assert(farmManagerImpl == IFarmManager(address(0)));
@@ -65,14 +66,16 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         );
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
-        address[] memory whitelistAddresses = new address[](2);
+        address[] memory whitelistAddresses = new address[](3);
         whitelistAddresses[0] = deployer;
         whitelistAddresses[1] = address(0xF3CFa03786e374e54b5A87c4043d03ed789faC78);
+        whitelistAddresses[2] = address(0xD26C9387F92EEa2cD030440A0799E403B225B8dD);
         (bytes32 whitelistRoot, bytes32[] memory whitelist) = TestnetConfigHelper.prepareWhitelist(whitelistAddresses);
 
-        ERC20Mock memeAsset = new ERC20Mock("MEME", "MEME");
+        ERC20Mock memeAsset = new ERC20Mock(MEME_TOKEN_SYMBOL, MEME_TOKEN_SYMBOL);
         memeAsset.mint(whitelistAddresses[0], 10_000_000e18);
         memeAsset.mint(whitelistAddresses[1], 10_000_000e18);
+        memeAsset.mint(whitelistAddresses[2], 10_000_000e18);
         IFarm memeFarm1 =
             IFarm(address(farmManager.createFarm(memeAsset, TestnetConfigHelper.getMemeFarmConfigWithWhitelist())));
 
@@ -96,7 +99,20 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
 
         IRewardToken(REWARD_TOKEN_ADDRESS).grantRole(MINTER_ROLE, address(farmManager));
 
+
+        // ComposeTest composeTest = new ComposeTest();
+
+
         vm.stopBroadcast();
+        // console.log("Compose test address: %s", address(composeTest));
+        if (DST_INFO.dstEid == LZ_CONFIG.eid) {
+            (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32) = farmManager.dstInfo();
+            console.log("===== DstInfo =====");
+            console.log("dstEid:", dstEid);
+            console.log("dstRewardFarm:", address(dstRewardFarm));
+            console.log("dstRewardFarmBytes32:");
+            console.logBytes32(dstRewardFarmBytes32);
+        }
         console.log("===== Deployed contracts =====");
         console.log("rewardToken:", address(REWARD_TOKEN_ADDRESS));
         console.log("farmImpl:", address(farmImpl));
@@ -109,14 +125,7 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         console.log("memeFarm2 (only 10000 Cap + 500 per User):", address(memeFarm2));
         console.log("memeFarm3 (whitelist + 10000 Cap + 500 per User):", address(memeFarm3));
         console.log("memeFarm4 (unlimited):", address(memeFarm4));
-        if (DST_INFO.dstEid == LZ_CONFIG.eid) {
-            (uint32 dstEid, IFarm dstRewardFarm, bytes32 dstRewardFarmBytes32) = farmManager.dstInfo();
-            console.log("===== DstInfo =====");
-            console.log("dstEid:", dstEid);
-            console.log("dstRewardFarm:", address(dstRewardFarm));
-            console.log("dstRewardFarmBytes32:");
-            console.logBytes32(dstRewardFarmBytes32);
-        }
+
         console.log("");
         console.log("");
         console.log("===== Whitelist Proof %s =====", whitelistAddresses[0]);
@@ -131,5 +140,13 @@ contract DeployTestnet is Script, BaseSepTestnetConfig {
         for (uint256 i = 0; i < proof2.length; i++) {
             console.logBytes32(proof2[i]);
         }
+        console.log("");
+        console.log("");
+        console.log("===== Whitelist Proof %s =====", whitelistAddresses[2]);
+        bytes32[] memory proof3 = TestnetConfigHelper.prepareMerkleProof(whitelist, 2);
+        for (uint256 i = 0; i < proof3.length; i++) {
+            console.logBytes32(proof3[i]);
+        }
+
     }
 }
