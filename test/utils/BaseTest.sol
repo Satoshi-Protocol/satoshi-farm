@@ -58,18 +58,27 @@ abstract contract BaseTest is DeployBase {
         vm.stopPrank();
     }
 
-    function requestClaim(address user, IFarm farm, address receiver) public returns (uint256, uint256, bytes32) {
+    function requestClaim(
+        address user,
+        IFarm farm,
+        address receiver
+    )
+        public
+        returns (uint256, uint256, uint256, bytes32)
+    {
         vm.startPrank(user);
         uint256 claimAmt = farm.getPendingReward(user);
-        (uint256 claimableTime, bytes32 claimId) = _prepareClaimId(farm, claimAmt, user, receiver, block.timestamp);
+        uint256 nonce = farm.getNonce(user);
+        (uint256 claimableTime, bytes32 claimId) =
+            _prepareClaimId(farm, claimAmt, user, receiver, block.timestamp, nonce);
 
         vm.expectEmit(true, true, true, true);
-        emit IFarmManager.ClaimRequested(farm, claimAmt, user, receiver, claimableTime, claimId);
+        emit IFarmManager.ClaimRequested(farm, claimAmt, user, receiver, claimableTime, nonce, claimId);
         farmManager.requestClaim(RequestClaimParams({ farm: farm, amount: claimAmt, receiver: receiver }));
 
         vm.stopPrank();
 
-        return (claimAmt, claimableTime, claimId);
+        return (claimAmt, claimableTime, nonce, claimId);
     }
 
     function executeClaim(
@@ -78,6 +87,7 @@ abstract contract BaseTest is DeployBase {
         uint256 amount,
         address receiver,
         uint256 claimableTime,
+        uint256 nonce,
         bytes32 claimId
     )
         public
@@ -85,7 +95,7 @@ abstract contract BaseTest is DeployBase {
         vm.startPrank(user);
 
         vm.expectEmit(true, true, true, true);
-        emit IFarmManager.ClaimExecuted(farm, amount, user, receiver, claimableTime, claimId);
+        emit IFarmManager.ClaimExecuted(farm, amount, user, receiver, claimableTime, nonce, claimId);
 
         farmManager.executeClaim(
             ExecuteClaimParams({
@@ -94,6 +104,7 @@ abstract contract BaseTest is DeployBase {
                 owner: user,
                 receiver: user,
                 claimableTime: claimableTime,
+                nonce: nonce,
                 claimId: claimId
             })
         );
@@ -122,7 +133,8 @@ abstract contract BaseTest is DeployBase {
         uint256 amount,
         address owner,
         address receiver,
-        uint256 currentTime
+        uint256 currentTime,
+        uint256 nonce
     )
         internal
         view
@@ -130,7 +142,7 @@ abstract contract BaseTest is DeployBase {
     {
         (,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
         uint256 claimableTime = currentTime + claimDelayTime;
-        return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime)));
+        return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime, nonce)));
     }
 
     function _getBalance(IERC20 token, address user) internal view returns (uint256) {

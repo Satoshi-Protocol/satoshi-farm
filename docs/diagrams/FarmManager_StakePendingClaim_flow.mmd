@@ -4,9 +4,30 @@ sequenceDiagram
     actor User
     participant FarmManager
     participant Farm
-    participant StakingFarm
+    participant RewardFarm
     participant RewardToken
     participant LayerZero
+
+    %% Request Claim Flow
+    rect rgb(180, 180, 255)
+        Note over User,RewardToken: Request Claim Flow
+        User->>+FarmManager: requestClaim(farm, amount, receiver)
+        
+        %% Update Reward
+        FarmManager->>+Farm: requestClaim(amount, owner, receiver)
+        Farm->>Farm: _beforeRequestClaim()
+        Farm->>Farm: _checkIsClaimable()
+        Farm->>Farm: _updateReward(owner)
+        
+        %% Request Claim
+        Farm->>Farm: claimableTime = block.timestamp + claimDelayTime
+        Farm->>Farm: claimId = keccak256(amount, owner, receiver, claimableTime)
+        Farm->>Farm: _claimStatus[claimId] = PENDING
+        Farm->>Farm: _updatePendingReward(owner, amount, false)
+        Farm-->>-FarmManager: return (claimAmt, claimableTime, claimId)
+        
+        FarmManager-->>-User: return (claimAmt, claimableTime, claimId)
+    end
 
     %% Local Stake Pending Claim Flow
     rect rgb(200, 200, 255)
@@ -20,23 +41,23 @@ sequenceDiagram
         FarmManager->>Farm: verify ClaimStatus == PENDING
         FarmManager->>Farm: verify claimableTime <= block.timestamp
         
-        %% Execute Claim to FarmManager
-        FarmManager->>+Farm: executeClaim(amount, owner, farmManager, claimableTime, claimId)
-        Farm->>Farm: _beforeExecuteClaim()
-        Farm->>Farm: _checkIsClaimable()
-        Farm->>Farm: verify claimId matches params
+        %% Force Execute Claim to FarmManager
+        FarmManager->>+Farm: forceExecuteClaim(amount, owner, farmManager, claimableTime, claimId)
+        Farm->>Farm: _beforeForceExecuteClaim()
+        Farm->>Farm: _checkClaimId()
         Farm->>Farm: _claimStatus[claimId] = CLAIMED
         Farm->>FarmManager: mintRewardCallback(farmManager, amount)
         FarmManager->>RewardToken: mint(farmManager, amount)
-        Farm-->>-FarmManager: emit ClaimExecuted(claimId, amount, owner, farmManager)
+        Farm-->>-FarmManager: emit ForceClaimExecuted(claimId, amount, owner, farmManager)
         
-        %% Stake to StakingFarm
-        FarmManager->>+StakingFarm: depositERC20(amount, farmManager, receiver)
-        StakingFarm->>StakingFarm: _beforeDeposit()
-        StakingFarm->>StakingFarm: _updateReward(receiver)
-        RewardToken->>StakingFarm: transferFrom(farmManager, stakingFarm, amount)
-        StakingFarm->>StakingFarm: _updateShares()
-        StakingFarm-->>-FarmManager: emit Deposit(amount, farmManager, receiver)
+        %% Stake to RewardFarm
+        FarmManager->>RewardToken: approve(farmManager, amount)
+        FarmManager->>+RewardFarm: depositERC20(amount, farmManager, receiver)
+        RewardFarm->>RewardFarm: _beforeDeposit()
+        RewardFarm->>RewardFarm: _updateReward(receiver)
+        RewardToken->>RewardFarm: transferFrom(farmManager, rewardFarm, amount)
+        RewardFarm->>RewardFarm: _updateShares()
+        RewardFarm-->>-FarmManager: emit Deposit(amount, farmManager, receiver)
         
         FarmManager-->>-User: return (claimedAmount, stakedAmount)
     end
@@ -53,15 +74,14 @@ sequenceDiagram
         FarmManager->>Farm: verify ClaimStatus == PENDING
         FarmManager->>Farm: verify params.claimableTime <= block.timestamp
         
-        %% Execute Claim to FarmManager
-        FarmManager->>+Farm: executeClaim(params.amount, params.owner, farmManager, params.claimableTime, params.claimId)
-        Farm->>Farm: _beforeExecuteClaim()
-        Farm->>Farm: _checkIsClaimable()
-        Farm->>Farm: verify claimId matches params
+        %% Force Execute Claim to FarmManager
+        FarmManager->>+Farm: forceExecuteClaim(params.amount, params.owner, farmManager, params.claimableTime, params.claimId)
+        Farm->>Farm: _beforeForceExecuteClaim()
+        Farm->>Farm: _checkClaimId()
         Farm->>Farm: _claimStatus[claimId] = CLAIMED
         Farm->>FarmManager: mintRewardCallback(farmManager, amount)
         FarmManager->>RewardToken: mint(farmManager, amount)
-        Farm-->>-FarmManager: emit ClaimExecuted(params.claimId, params.amount, params.owner, farmManager)
+        Farm-->>-FarmManager: emit ForceClaimExecuted(claimId, params.amount, params.owner, farmManager)
         
         %% Send Cross Chain Message
         FarmManager->>RewardToken: approve(rewardToken, amount)

@@ -33,6 +33,8 @@ contract GoldAirdrop is IGoldAirdrop, OwnableUpgradeable, UUPSUpgradeable {
         external
         initializer
     {
+        _checkNotZeroAddress(_gold);
+
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
 
@@ -59,7 +61,7 @@ contract GoldAirdrop is IGoldAirdrop, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function claim(address account, uint256 amount, bytes32[] calldata merkleProof) external {
-        if (!isValidTime()) revert InvalidTime(block.timestamp, startTime, endTime);
+        if (!isValidTime()) revert InvalidTime(startTime, endTime);
 
         // Verify the merkle proof
         bytes32 leaf = keccak256(abi.encode(account, amount));
@@ -89,5 +91,9 @@ contract GoldAirdrop is IGoldAirdrop, OwnableUpgradeable, UUPSUpgradeable {
 
     function _setClaimed(bytes32 leaf) internal {
         _claimed[leaf] = true;
+    }
+
+    function _checkNotZeroAddress(address account) internal pure {
+        if (account == address(0)) revert InvalidZeroAddress();
     }
 }

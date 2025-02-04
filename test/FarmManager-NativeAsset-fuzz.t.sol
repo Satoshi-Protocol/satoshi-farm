@@ -101,7 +101,7 @@ contract FarmManagerNativeAssetFuzzTest is Test, DeployBase {
         // Request claim
         uint256 amountToClaim = farm.getPendingReward(user);
 
-        (uint256 claimAmt, uint256 claimableTime, bytes32 claimId) =
+        (uint256 claimAmt, uint256 claimableTime, uint256 nonce, bytes32 claimId) =
             farmTest.requestClaim(user, RequestClaimParams({ farm: farm, receiver: user, amount: amountToClaim }));
 
         // Wait for delay period
@@ -116,6 +116,7 @@ contract FarmManagerNativeAssetFuzzTest is Test, DeployBase {
                 owner: user,
                 receiver: user,
                 claimableTime: claimableTime,
+                nonce: nonce,
                 claimId: claimId
             })
         );

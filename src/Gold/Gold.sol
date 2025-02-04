@@ -18,9 +18,9 @@ contract Gold is ERC20Upgradeable, ERC20PermitUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize() external initializer {
-        __ERC20_init("Gold", "GOLD");
-        __ERC20Permit_init("Gold");
+    function initialize(string memory name, string memory symbol) external initializer {
+        __ERC20_init(name, symbol);
+        __ERC20Permit_init(name);
         __Ownable_init(msg.sender);
     }
 

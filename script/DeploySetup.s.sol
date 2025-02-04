@@ -28,7 +28,6 @@ contract DeploySetupScript is Script, DeploySetupConfig {
     IFarmManager farmManagerImpl;
     IBeacon farmBeacon;
     IFarmManager farmManager;
-    IFarm rewardFarm;
 
     function setUp() public {
         DEPLOYER_PRIVATE_KEY = uint256(vm.envBytes32("DEPLOYER_PRIVATE_KEY"));
@@ -54,16 +53,9 @@ contract DeploySetupScript is Script, DeploySetupConfig {
         farmBeacon = new UpgradeableBeacon(address(farmImpl), owner);
 
         // deploy farm manager proxy
-        DstInfo memory dstInfo;
-        LzConfig memory lzConfig;
-        FarmConfig memory farmConfig;
         bytes memory data =
-            abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardToken, dstInfo, lzConfig, farmConfig));
+            abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardToken, DST_INFO, LZ_CONFIG, REWARD_FARM_CONFIG));
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
-
-        // deploy reward farm
-        IERC20 underlyingAsset = IERC20(address(rewardToken));
-        rewardFarm = IFarm(address(farmManager.createFarm(underlyingAsset, REWARD_FARM_CONFIG)));
 
         vm.stopBroadcast();
 
@@ -72,6 +64,10 @@ contract DeploySetupScript is Script, DeploySetupConfig {
         console.log("farmManagerImpl:", address(farmManagerImpl));
         console.log("farmBeacon:", address(farmBeacon));
         console.log("farmManager:", address(farmManager));
-        console.log("rewardFarm:", address(rewardFarm));
+        if (DST_INFO.dstEid == LZ_CONFIG.eid) {
+            (, IFarm rewardFarm,) = farmManager.dstInfo();
+            console.log("deploy on primary chain");
+            console.log("rewardFarm:", address(rewardFarm));
+        }
     }
 }
