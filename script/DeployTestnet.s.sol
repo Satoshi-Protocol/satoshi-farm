@@ -16,7 +16,13 @@ import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import { ERC20Mock } from "./testnet/MockERC20.sol";
-import { HyperliquidTestnetConfig, ArbSepTestnetConfig, BaseSepTestnetConfig, SepoliaTestnetConfig, TestnetConfigHelper } from "./testnet/TestnetConfig.sol";
+import {
+    ArbSepTestnetConfig,
+    BaseSepTestnetConfig,
+    HyperliquidTestnetConfig,
+    SepoliaTestnetConfig,
+    TestnetConfigHelper
+} from "./testnet/TestnetConfig.sol";
 // import { ComposeTest } from "../src/ComposeTest.sol";
 
 contract DeployTestnet is Script, ArbSepTestnetConfig {
@@ -99,9 +105,7 @@ contract DeployTestnet is Script, ArbSepTestnetConfig {
 
         IRewardToken(REWARD_TOKEN_ADDRESS).grantRole(MINTER_ROLE, address(farmManager));
 
-
         // ComposeTest composeTest = new ComposeTest();
-
 
         vm.stopBroadcast();
         // console.log("Compose test address: %s", address(composeTest));
@@ -147,6 +151,5 @@ contract DeployTestnet is Script, ArbSepTestnetConfig {
         for (uint256 i = 0; i < proof3.length; i++) {
             console.logBytes32(proof3[i]);
         }
-
     }
 }

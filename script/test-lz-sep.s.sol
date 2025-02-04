@@ -21,9 +21,9 @@ import { Script, console } from "forge-std/Script.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import { ERC20Mock } from "./testnet/MockERC20.sol";
-import { TestScriptConfig, ArbSepTestnetConfig } from "./testnet/TestnetConfig.sol";
 import { OFTComposeMsgCodec } from "../src/layerzero/OFTComposeMsgCodec.sol";
+import { ERC20Mock } from "./testnet/MockERC20.sol";
+import { ArbSepTestnetConfig, TestScriptConfig } from "./testnet/TestnetConfig.sol";
 
 // import { BaseSepTestnetConfig } from "./testnet/TestnetConfig.sol";
 contract TestSepScript is Script, TestScriptConfig {
@@ -93,15 +93,12 @@ contract TestSepScript is Script, TestScriptConfig {
         // SendParam memory sendParam = formatSimpleSendParam(dstEid, owner, targetAmt, hex"00030100110100000000000000000000000000030d40");
         // MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
         // rewardToken.send{ value: expectFee.nativeFee }(sendParam, expectFee, address(0x000000000000000000000000b4bb342294fe7d0d2ebdd894498b27bba13d5f1b));
-        
-        
-        
+
         // DstInfo memory dstInfo = DstInfo({
         //     dstEid: 40_245,
         //     dstFarmManagerBytes32: bytes32(0x000000000000000000000000b4bb342294fe7d0d2ebdd894498b27bba13d5f1b)
         // });
         // farmManager.updateDstInfo()
-
 
         // rewardToken.mint(owner, 1000e18);
         // uint256 rewardAmt = 1e18;
@@ -125,7 +122,6 @@ contract TestSepScript is Script, TestScriptConfig {
         //   value: expectFee.nativeFee
         // }(claimAndStakeParamsCrossChain);
 
-
         ERC20Mock PEPE = new ERC20Mock("PEPE", "PEPE");
         PEPE.mint(owner, 1000e18);
         console.log("PEPE balance: %d", PEPE.balanceOf(owner));
@@ -133,5 +129,4 @@ contract TestSepScript is Script, TestScriptConfig {
 
         vm.stopBroadcast();
     }
-
 }

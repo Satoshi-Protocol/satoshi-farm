@@ -21,9 +21,9 @@ import { Script, console } from "forge-std/Script.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import { ERC20Mock } from "./testnet/MockERC20.sol";
-import { TestScriptConfig, ArbSepTestnetConfig } from "./testnet/TestnetConfig.sol";
 import { OFTComposeMsgCodec } from "../src/layerzero/OFTComposeMsgCodec.sol";
+import { ERC20Mock } from "./testnet/MockERC20.sol";
+import { ArbSepTestnetConfig, TestScriptConfig } from "./testnet/TestnetConfig.sol";
 
 // import { BaseSepTestnetConfig } from "./testnet/TestnetConfig.sol";
 contract TestArbScript is Script, TestScriptConfig {
@@ -43,16 +43,12 @@ contract TestArbScript is Script, TestScriptConfig {
     function run() public {
         vm.startBroadcast(OWNER_PRIVATE_KEY);
         console.log("owner: %s", owner);
-        memeAsset.mint(owner, 100000000e18);
+        memeAsset.mint(owner, 100_000_000e18);
         uint256 memeAssetBalance = memeAsset.balanceOf(owner);
         console.log("memeAsset balance: %d", memeAssetBalance);
 
         memeAsset.approve(address(farmManager), type(uint256).max);
-        DepositParams memory depositParams = DepositParams({
-          farm: memeFarm,
-          amount: 10e18,
-          receiver: owner
-        });
+        DepositParams memory depositParams = DepositParams({ farm: memeFarm, amount: 10e18, receiver: owner });
         farmManager.depositERC20(depositParams);
 
         // uint256 reward = farmManager.previewReward(memeFarm, owner);
@@ -97,15 +93,12 @@ contract TestArbScript is Script, TestScriptConfig {
         // ai16z.mint(owner, 1000e18);
         // console.log("AI16Z balance: %d", ai16z.balanceOf(owner));
         // console.log("AI16Z Address: %s", address(ai16z));
-        
-        
-        
+
         // DstInfo memory dstInfo = DstInfo({
         //     dstEid: 40_245,
         //     dstFarmManagerBytes32: bytes32(0x000000000000000000000000b4bb342294fe7d0d2ebdd894498b27bba13d5f1b)
         // });
         // farmManager.updateDstInfo()
-
 
         // rewardToken.mint(owner, 1000e18);
         // uint256 rewardAmt = 1e18;
@@ -131,5 +124,4 @@ contract TestArbScript is Script, TestScriptConfig {
 
         vm.stopBroadcast();
     }
-
 }

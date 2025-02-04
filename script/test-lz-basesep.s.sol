@@ -21,9 +21,9 @@ import { Script, console } from "forge-std/Script.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
+import { OFTComposeMsgCodec } from "../src/layerzero/OFTComposeMsgCodec.sol";
 import { ERC20Mock } from "./testnet/MockERC20.sol";
 import { TestScriptConfig } from "./testnet/TestnetConfig.sol";
-import { OFTComposeMsgCodec } from "../src/layerzero/OFTComposeMsgCodec.sol";
 // import { BaseSepTestnetConfig } from "./testnet/TestnetConfig.sol";
 
 contract TestScript is Script, TestScriptConfig {
@@ -81,7 +81,6 @@ contract TestScript is Script, TestScriptConfig {
         // console.log("dstEid: %d", sendParam.dstEid);
         // MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
 
-
         // console.log("Expect fee:");
         // console.log("  - nativeFee: %d", expectFee.nativeFee);
         // console.log("  - lzTokenFee: %d", expectFee.lzTokenFee);
@@ -116,7 +115,6 @@ contract TestScript is Script, TestScriptConfig {
         // SendParam memory sendParam = formatSimpleSendParam(dstEid, owner, targetAmt, hex"00030100110100000000000000000000000000030d40");
         // MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
         // rewardToken.send{ value: expectFee.nativeFee }(sendParam, expectFee, address(0x000000000000000000000000b4bb342294fe7d0d2ebdd894498b27bba13d5f1b));
-        
 
         vm.stopBroadcast();
     }

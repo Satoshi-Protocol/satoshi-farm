@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Script, console } from "forge-std/Script.sol";
 import { FarmConfig, IFarm } from "../../src/core/interfaces/IFarm.sol";
 import { MerkleLib } from "../../test/utils/MerkleLib.sol";
+import { Script, console } from "forge-std/Script.sol";
 
-import { LZ_COMPOSE_OPT, DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
+import { DstInfo, IFarmManager, LZ_COMPOSE_OPT, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
 import { IOFT, MessagingFee, SendParam } from "../../src/layerzero/IOFT.sol";
 
+import { OFTComposeMsgCodec } from "../../src/layerzero/OFTComposeMsgCodec.sol";
 import { ERC20Mock } from "./MockERC20.sol";
-import {OFTComposeMsgCodec} from "../../src/layerzero/OFTComposeMsgCodec.sol";
 
 library TestnetConfigHelper {
     function prepareMerkleProof(bytes32[] memory whitelist, uint256 index) public pure returns (bytes32[] memory) {
@@ -130,7 +130,6 @@ abstract contract BaseSepTestnetConfig {
     });
 }
 
-
 abstract contract SepoliaTestnetConfig {
     address constant REWARD_TOKEN_ADDRESS = address(0xEb655511b444d0f9eb78ABc6fb7EdFc238d0c7F1);
     string constant MEME_TOKEN_SYMBOL = "HYPE";
@@ -142,12 +141,11 @@ abstract contract SepoliaTestnetConfig {
     });
 
     LzConfig LZ_CONFIG = LzConfig({
-        eid: 40161, // BASE Sepolia chain
+        eid: 40_161, // BASE Sepolia chain
         endpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
         refundAddress: 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2
     });
 }
-
 
 abstract contract HyperliquidTestnetConfig {
     address constant REWARD_TOKEN_ADDRESS = address(0x46Ff6484BeB9B4e368eED4B5bBc5609BE44415eF);
@@ -166,7 +164,7 @@ abstract contract HyperliquidTestnetConfig {
     // });
 
     LzConfig LZ_CONFIG = LzConfig({
-        eid: 40332, // BASE Sepolia chain
+        eid: 40_332, // BASE Sepolia chain
         endpoint: address(0x6Ac7bdc07A0583A362F1497252872AE6c0A5F5B8),
         refundAddress: 0xb031931f4A6AB97302F2b931bfCf5C81A505E4c2
     });
@@ -205,9 +203,8 @@ abstract contract TestScriptConfig {
         view
         returns (SendParam memory)
     {
-        (uint32 dstEid, , bytes32 dstFarmManagerBytes32) = farmManager.dstInfo();
-        bytes memory composeMsg =
-            abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver));
+        (uint32 dstEid,, bytes32 dstFarmManagerBytes32) = farmManager.dstInfo();
+        bytes memory composeMsg = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver));
 
         return SendParam(
             dstEid,
@@ -227,10 +224,9 @@ abstract contract TestScriptConfig {
         bytes memory extraOptions
     )
         public
-        view
+        pure
         returns (SendParam memory)
     {
-
         return SendParam(
             dstEid,
             OFTComposeMsgCodec.addressToBytes32(receiver),
