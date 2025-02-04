@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 interface IGold is IERC20 {
-    function initialize() external;
+    function initialize(string memory name, string memory symbol) external;
 
     function wards(address) external view returns (bool);
 

@@ -4,9 +4,10 @@ pragma solidity ^0.8.20;
 import { IGold } from "./IGold.sol";
 
 interface IGoldAirdrop {
-    error InvalidTime(uint256 currentTime, uint256 startTime, uint256 endTime);
+    error InvalidTime(uint256 startTime, uint256 endTime);
     error AlreadyClaimed(bytes32 leaf);
     error InvalidProof(bytes32[] merkleProof, bytes32 merkleRoot, bytes32 leaf);
+    error InvalidZeroAddress();
 
     event AirdropTimeUpdated(uint256 indexed startTime, uint256 indexed endTime);
     event MerkleRootUpdated(bytes32 indexed merkleRoot);
