@@ -96,9 +96,9 @@ library FarmMath {
         pure
         returns (uint256)
     {
-        if (currentTime < startTime) {
-            return 0;
-        }
+        if (currentTime < startTime) return 0;
+        if (endTime < lastUpdateTime) return 0;
+
         if (currentTime > endTime) {
             return endTime - Math.max(lastUpdateTime, startTime);
         }
