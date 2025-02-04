@@ -34,10 +34,9 @@ contract GoldAirdrop is IGoldAirdrop, OwnableUpgradeable, UUPSUpgradeable {
         initializer
     {
         _checkNotZeroAddress(_gold);
-        
+
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
-
 
         gold = IGold(_gold);
         startTime = _startTime;
