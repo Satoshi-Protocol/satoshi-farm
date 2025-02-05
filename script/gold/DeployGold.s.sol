@@ -7,7 +7,7 @@ import { NAME, SYMBOL } from "./DeployGoldConfig.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Script, console } from "forge-std/Script.sol";
 
-contract DeploySetupScript is Script {
+contract DeployGoldScript is Script {
     uint256 internal DEPLOYER_PRIVATE_KEY;
     IGold gold;
 

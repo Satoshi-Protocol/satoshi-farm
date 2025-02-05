@@ -8,7 +8,7 @@ import { END_TIME, GOLD_ADDRESS, MERKLE_ROOT, START_TIME } from "./DeployGoldAir
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Script, console } from "forge-std/Script.sol";
 
-contract DeploySetupScript is Script {
+contract DeployGoldAirdropScript is Script {
     uint256 internal DEPLOYER_PRIVATE_KEY;
     IGold gold;
     IGoldAirdrop goldAirdrop;
