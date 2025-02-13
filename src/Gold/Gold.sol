@@ -10,7 +10,7 @@ contract Gold is ERC20Upgradeable, ERC20PermitUpgradeable, OwnableUpgradeable {
     mapping(address => bool) public wards;
 
     modifier auth() {
-        require(wards[msg.sender], "DebtToken: not-authorized");
+        require(wards[msg.sender], "Gold: not-authorized");
         _;
     }
 
