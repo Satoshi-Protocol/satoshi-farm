@@ -829,7 +829,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /**
-     * @notice Checks if the total amount is correct
+     * @notice Checks if the msg.value is greater than or equal to the total amount
      * @param amountArr The amount array
      * @param msgValue The message value
      */
@@ -839,7 +839,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             totalAmount += amountArr[i];
         }
 
-        if (msgValue != totalAmount) revert InvalidAmount(msgValue, totalAmount);
+        if (msgValue < totalAmount) revert InvalidAmount(msgValue, totalAmount);
     }
 
     /**
