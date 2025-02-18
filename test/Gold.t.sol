@@ -23,9 +23,10 @@ import { DEPLOYER, OWNER, TestConfig } from "./utils/TestConfig.sol";
 
 import { IGold } from "../src/Gold/interfaces/IGold.sol";
 import { IGoldAirdrop } from "../src/Gold/interfaces/IGoldAirdrop.sol";
+
+import { MerkleLib } from "./utils/MerkleLib.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { MerkleLib } from "./utils/MerkleLib.sol";
 
 import "forge-std/console.sol";
 
@@ -50,7 +51,7 @@ contract GoldTest is BaseTest {
         uint256 mintAmt = totalUsers * airdropAmt;
 
         (gold, goldAirdrop) = _deployGold(DEPLOYER);
-        
+
         vm.startPrank(DEPLOYER);
 
         gold.rely(DEPLOYER);
@@ -104,5 +105,4 @@ contract GoldTest is BaseTest {
 
         vm.stopPrank();
     }
-
 }

@@ -8,10 +8,10 @@ import { FarmConfig, IFarm } from "../../src/core/interfaces/IFarm.sol";
 import { DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
 
-import { IGold } from "../../src/Gold/interfaces/IGold.sol";
-import { IGoldAirdrop } from "../../src/Gold/interfaces/IGoldAirdrop.sol";
 import { Gold } from "../../src/Gold/Gold.sol";
 import { GoldAirdrop } from "../../src/Gold/GoldAirdrop.sol";
+import { IGold } from "../../src/Gold/interfaces/IGold.sol";
+import { IGoldAirdrop } from "../../src/Gold/interfaces/IGoldAirdrop.sol";
 
 import { DEPLOYER, OWNER, TestConfig } from "./TestConfig.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -107,8 +107,7 @@ abstract contract DeployBase is Test, TestConfig {
         vm.startPrank(deployer);
 
         address goldImpl = address(new Gold());
-        bytes memory goldData =
-            abi.encodeCall(Gold.initialize, ("Gold", "GOLD"));
+        bytes memory goldData = abi.encodeCall(Gold.initialize, ("Gold", "GOLD"));
         gold = IGold(address(new ERC1967Proxy(goldImpl, goldData)));
 
         address goldAirdropImpl = address(new GoldAirdrop());
