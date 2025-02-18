@@ -875,9 +875,12 @@ contract Farm is IFarm, Initializable {
      * @notice Check farm config is valid
      * @param _farmConfig The farm config
      */
-    function _checkFarmConfig(FarmConfig memory _farmConfig) internal pure {
+    function _checkFarmConfig(FarmConfig memory _farmConfig) internal view {
         if (_farmConfig.rewardEndTime < _farmConfig.rewardStartTime) {
             revert InvalidConfigRewardTime(_farmConfig.rewardStartTime, _farmConfig.rewardEndTime);
+        }
+        if (_farmConfig.rewardEndTime <= _lastUpdateTime) {
+            revert InvalidRewardEndTime(_farmConfig.rewardEndTime, _lastUpdateTime);
         }
         if (_farmConfig.depositEndTime < _farmConfig.depositStartTime) {
             revert InvalidConfigDepositTime(_farmConfig.depositStartTime, _farmConfig.depositEndTime);

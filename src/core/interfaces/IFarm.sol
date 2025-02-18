@@ -96,6 +96,7 @@ interface IFarm {
     error ForceClaimNotEnabled();
     error WithdrawNotEnabled();
     error DelayTimeIsNotZero();
+    error InvalidRewardEndTime(uint256 rewardEndTime, uint256 lastUpdateTime);
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
