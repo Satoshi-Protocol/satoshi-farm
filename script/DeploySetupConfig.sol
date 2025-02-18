@@ -24,8 +24,8 @@ abstract contract DeploySetupConfig {
 
     DstInfo internal DST_INFO = DstInfo({
         dstEid: 40_231,
-        dstRewardFarm: IFarm(address(0xfDe4Ba7C4E86C00136DD9E915a4C4e1eE74c6Dad)),
-        dstFarmManagerBytes32: bytes32(uint256(uint160(0x575BEFDE27d08364078eb5409ACdCeAfEaB92e3A)))
+        dstRewardFarm: IFarm(address(0xa2e432153Ce62663c6d97C66c1fc368F47d1dbF6)),
+        dstFarmManagerBytes32: bytes32(uint256(uint160(0x2c00119162518D7C137257782022AebD4B79f64d)))
     });
 
     LzConfig internal LZ_CONFIG = LzConfig({
