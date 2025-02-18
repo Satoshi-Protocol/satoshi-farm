@@ -91,6 +91,14 @@ contract Farm is IFarm, Initializable {
         _;
     }
 
+    /**
+     * @notice Farm contract constructor
+     * @dev Inherit Beacon proxy upgrade pattern and disable initializers in the constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @inheritdoc IFarm
     function initialize(
         address _underlyingAsset,

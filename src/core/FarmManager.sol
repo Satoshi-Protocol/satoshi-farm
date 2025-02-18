@@ -86,6 +86,14 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 
     /**
+     * @notice Farm Manager contract constructor
+     * @dev Inherit UUPS upgrade pattern and disable initializers in the constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
      * @notice Initializes the FarmManager contract
      * @param _farmBeacon The address of the farm beacon
      * @param _rewardToken The address of the reward token
