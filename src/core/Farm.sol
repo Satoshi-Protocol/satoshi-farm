@@ -337,6 +337,21 @@ contract Farm is IFarm, Initializable {
         return _isClaimable();
     }
 
+    /// @inheritdoc IFarm
+    function getClaimId(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        uint256 nonce
+    )
+        external
+        pure
+        returns (bytes32)
+    {
+        return _calcClaimId(amount, owner, receiver, claimableTime, nonce);
+    }
+
     /* --- internal functions --- */
 
     /**
@@ -836,8 +851,8 @@ contract Farm is IFarm, Initializable {
         internal
         pure
     {
-        bytes32 expectedClaimId = _calcClaimId(amount, owner, receiver, claimableTime, nonce);
-        if (claimId != expectedClaimId) revert InvalidClaimId(claimId, expectedClaimId);
+        bytes32 calcClaimId = _calcClaimId(amount, owner, receiver, claimableTime, nonce);
+        if (claimId != calcClaimId) revert InvalidClaimId(claimId, calcClaimId);
     }
 
     /**

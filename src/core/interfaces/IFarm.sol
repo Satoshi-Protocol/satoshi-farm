@@ -76,7 +76,7 @@ interface IFarm {
     error InvalidClaimTime(uint256 currentTime, uint256 claimStartTime, uint256 claimEndTime);
     error ClaimIsNotReady(uint256 claimableTime, uint256 currentTime);
     error AlreadyClaimed();
-    error InvalidClaimId(bytes32 claimId, bytes32 expectedClaimId);
+    error InvalidClaimId(bytes32 claimId, bytes32 calcClaimId);
     error ZeroPendingRewards();
     error RequestClaimFirst();
     error InvalidStatusToRequestClaim(ClaimStatus status);
@@ -344,6 +344,26 @@ interface IFarm {
      * @return nonce The nonce for the address
      */
     function getNonce(address addr) external view returns (uint256);
+
+    /**
+     * @notice Get calculated claim id
+     * @param amount The amount of the reward token
+     * @param owner The address of the owner
+     * @param receiver The address of the receiver
+     * @param claimableTime The claimable time
+     * @param nonce The nonce
+     * @return claimId The claim id
+     */
+    function getClaimId(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        uint256 nonce
+    )
+        external
+        pure
+        returns (bytes32);
 
     /**
      * @notice The claim function is open
