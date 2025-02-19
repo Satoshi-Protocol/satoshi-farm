@@ -232,14 +232,18 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         payable
         whenNotPaused
     {
-        uint256[] memory depositAmountArr = new uint256[](depositWithProofParamsArr.length);
+        uint256 totalDepositAmount;
         for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
-            depositAmountArr[i] = depositWithProofParamsArr[i].amount;
+            DepositWithProofParams memory depositWithProofParams = depositWithProofParamsArr[i];
+            totalDepositAmount += depositWithProofParams.amount;
+            depositNativeAssetWithProof(depositWithProofParams);
         }
-        _checkTotalAmount(depositAmountArr, msg.value);
 
-        for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
-            depositNativeAssetWithProof(depositWithProofParamsArr[i]);
+        _checkTotalAmount(totalDepositAmount, msg.value);
+
+        if (msg.value > totalDepositAmount) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - totalDepositAmount);
         }
     }
 
@@ -285,15 +289,18 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     /// @inheritdoc IFarmManager
     function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) public payable whenNotPaused {
-        uint256[] memory depositAmountArr = new uint256[](depositParamsArr.length);
+        uint256 totalDepositAmount;
         for (uint256 i = 0; i < depositParamsArr.length; i++) {
-            depositAmountArr[i] = depositParamsArr[i].amount;
+            DepositParams memory depositParams = depositParamsArr[i];
+            totalDepositAmount += depositParams.amount;
+            depositNativeAsset(depositParams);
         }
 
-        _checkTotalAmount(depositAmountArr, msg.value);
+        _checkTotalAmount(totalDepositAmount, msg.value);
 
-        for (uint256 i = 0; i < depositParamsArr.length; i++) {
-            depositNativeAsset(depositParamsArr[i]);
+        if (msg.value > totalDepositAmount) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - totalDepositAmount);
         }
     }
 
@@ -415,8 +422,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    /// @dev This function is `external` because it handles `msg.value` and may refund excess native assets.
     function stakePendingClaimCrossChain(StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams)
-        public
+        external
         payable
         whenNotPaused
         onlyDstEidIsNotCurrentChain
@@ -442,12 +450,20 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, nonce, claimId);
 
-        _stakeCrossChain(receiver, amount, extraOptions, msg.value);
+        uint256 nativeFee = _stakeCrossChain(receiver, amount, extraOptions, msg.value);
+
+        if (msg.value > nativeFee) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - nativeFee);
+        }
 
         emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, nonce, claimId);
     }
 
     /// @inheritdoc IFarmManager
+    /// @dev `msg.value` is shared across the entire transaction, so this batch function cannot simply loop over `claimAndStakeCrossChain`.
+    /// Doing so would cause incorrect fee handling and multiple refunds.
+    /// Instead, fees are accumulated and processed once at the end.
     function stakePendingClaimCrossChainBatch(
         StakePendingClaimCrossChainParams[] memory stakePendingClaimCrossChainParamsArr
     )
@@ -456,23 +472,44 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         whenNotPaused
         onlyDstEidIsNotCurrentChain
     {
-        uint256[] memory feeAmountArr = new uint256[](stakePendingClaimCrossChainParamsArr.length);
+        uint256 totalFeeAmount;
         for (uint256 i = 0; i < stakePendingClaimCrossChainParamsArr.length; i++) {
             StakePendingClaimCrossChainParams memory stakePendingClaimCrossChainParams =
                 stakePendingClaimCrossChainParamsArr[i];
-            SendParam memory sendParam = formatDepositLzSendParam(
-                stakePendingClaimCrossChainParams.receiver,
+            (
+                IFarm farm,
+                uint256 amount,
+                address receiver,
+                uint256 claimableTime,
+                uint256 nonce,
+                bytes32 claimId,
+                bytes memory extraOptions
+            ) = (
+                stakePendingClaimCrossChainParams.farm,
                 stakePendingClaimCrossChainParams.amount,
+                stakePendingClaimCrossChainParams.receiver,
+                stakePendingClaimCrossChainParams.claimableTime,
+                stakePendingClaimCrossChainParams.nonce,
+                stakePendingClaimCrossChainParams.claimId,
                 stakePendingClaimCrossChainParams.extraOptions
             );
-            MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
-            feeAmountArr[i] = expectFee.nativeFee;
+
+            _checkFarmIsValid(farm);
+
+            farm.forceExecuteClaim(amount, msg.sender, receiver, claimableTime, nonce, claimId);
+
+            uint256 nativeFee = _stakeCrossChain(receiver, amount, extraOptions, msg.value);
+
+            totalFeeAmount += nativeFee;
+
+            emit PendingClaimStaked(farm, amount, msg.sender, receiver, claimableTime, nonce, claimId);
         }
 
-        _checkTotalAmount(feeAmountArr, msg.value);
+        _checkTotalAmount(totalFeeAmount, msg.value);
 
-        for (uint256 i = 0; i < stakePendingClaimCrossChainParamsArr.length; i++) {
-            stakePendingClaimCrossChain(stakePendingClaimCrossChainParamsArr[i]);
+        if (msg.value > totalFeeAmount) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - totalFeeAmount);
         }
     }
 
@@ -505,8 +542,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    /// @dev This function is `external` because it handles `msg.value` and may refund excess native assets.
     function claimAndStakeCrossChain(ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams)
-        public
+        external
         payable
         whenNotPaused
         onlyDstEidIsNotCurrentChain
@@ -522,34 +560,53 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         uint256 claimAmt = farm.forceClaim(amount, msg.sender, address(this));
 
-        _stakeCrossChain(receiver, claimAmt, extraOptions, msg.value);
+        uint256 nativeFee = _stakeCrossChain(receiver, claimAmt, extraOptions, msg.value);
+
+        if (msg.value > nativeFee) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - nativeFee);
+        }
 
         emit ClaimAndStake(farm, claimAmt, msg.sender, receiver);
     }
 
     /// @inheritdoc IFarmManager
+    /// @dev `msg.value` is shared across the entire transaction, so this batch function cannot simply loop over `claimAndStakeCrossChain`.
+    /// Doing so would cause incorrect fee handling and multiple refunds.
+    /// Instead, fees are accumulated and processed once at the end.
     function claimAndStakeCrossChainBatch(ClaimAndStakeCrossChainParams[] memory claimAndStakeCrossChainParamsArr)
         public
         payable
         whenNotPaused
         onlyDstEidIsNotCurrentChain
     {
-        uint256[] memory feeAmountArr = new uint256[](claimAndStakeCrossChainParamsArr.length);
+        uint256 totalFeeAmount;
         for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
             ClaimAndStakeCrossChainParams memory claimAndStakeCrossChainParams = claimAndStakeCrossChainParamsArr[i];
-            SendParam memory sendParam = formatDepositLzSendParam(
-                claimAndStakeCrossChainParams.receiver,
+
+            (IFarm farm, uint256 amount, address receiver, bytes memory extraOptions) = (
+                claimAndStakeCrossChainParams.farm,
                 claimAndStakeCrossChainParams.amount,
+                claimAndStakeCrossChainParams.receiver,
                 claimAndStakeCrossChainParams.extraOptions
             );
-            MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
-            feeAmountArr[i] = expectFee.nativeFee;
+
+            _checkFarmIsValid(farm);
+
+            uint256 claimAmt = farm.forceClaim(amount, msg.sender, address(this));
+
+            uint256 nativeFee = _stakeCrossChain(receiver, claimAmt, extraOptions, msg.value);
+
+            totalFeeAmount += nativeFee;
+
+            emit ClaimAndStake(farm, claimAmt, msg.sender, receiver);
         }
 
-        _checkTotalAmount(feeAmountArr, msg.value);
+        _checkTotalAmount(totalFeeAmount, msg.value);
 
-        for (uint256 i = 0; i < claimAndStakeCrossChainParamsArr.length; i++) {
-            claimAndStakeCrossChain(claimAndStakeCrossChainParamsArr[i]);
+        if (msg.value > totalFeeAmount) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - totalFeeAmount);
         }
     }
 
@@ -802,13 +859,24 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
      * @param amount The amount to stake
      * @param extraOptions The extra options
      * @param msgValue The message value
+     * @return uint256 The native fee
      */
-    function _stakeCrossChain(address receiver, uint256 amount, bytes memory extraOptions, uint256 msgValue) internal {
+    function _stakeCrossChain(
+        address receiver,
+        uint256 amount,
+        bytes memory extraOptions,
+        uint256 msgValue
+    )
+        internal
+        returns (uint256)
+    {
         SendParam memory sendParam = formatDepositLzSendParam(receiver, amount, extraOptions);
         MessagingFee memory expectFee = rewardToken.quoteSend(sendParam, false);
         if (msgValue < expectFee.nativeFee) revert InsufficientFee(expectFee.nativeFee, msgValue);
 
         rewardToken.send{ value: expectFee.nativeFee }(sendParam, expectFee, lzConfig.refundAddress);
+
+        return expectFee.nativeFee;
     }
 
     /**
@@ -821,15 +889,10 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     /**
      * @notice Checks if the msg.value is greater than or equal to the total amount
-     * @param amountArr The amount array
+     * @param totalAmount The total amount
      * @param msgValue The message value
      */
-    function _checkTotalAmount(uint256[] memory amountArr, uint256 msgValue) internal pure {
-        uint256 totalAmount;
-        for (uint256 i = 0; i < amountArr.length; i++) {
-            totalAmount += amountArr[i];
-        }
-
+    function _checkTotalAmount(uint256 totalAmount, uint256 msgValue) internal pure {
         if (msgValue < totalAmount) revert InvalidAmount(msgValue, totalAmount);
     }
 
@@ -855,5 +918,13 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
      */
     function _dstEidIsCurrentChain() internal view returns (bool) {
         return lzConfig.eid == dstInfo.dstEid;
+    }
+
+    /**
+     * @notice Refunds the remaining native asset
+     */
+    function _refundNativeAsset(uint256 amount) internal {
+        (bool success,) = msg.sender.call{ value: amount }("");
+        if (!success) revert TransferNativeAssetFailed(msg.sender, amount);
     }
 }
