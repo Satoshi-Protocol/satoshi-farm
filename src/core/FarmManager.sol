@@ -785,18 +785,17 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         if (opt == LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN) {
             _requireNotPaused();
 
-            uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
-            (uint256 depositAmount, address receiver) = abi.decode(data, (uint256, address));
-            if (_amountLD != depositAmount) revert InvalidReceiveAmount(_amountLD, depositAmount);
-
             IFarm rewardFarm = dstInfo.dstRewardFarm;
             _checkFarmIsValid(rewardFarm);
 
-            // NOTE: Farm will call this.transferCallback to transfer the reward token to the farm from self
-            rewardToken.approve(address(this), depositAmount);
-            rewardFarm.depositERC20(depositAmount, address(this), receiver);
+            uint256 _amountLD = OFTComposeMsgCodec.amountLD(_message);
+            address receiver = abi.decode(data, (address));
 
-            emit Deposit(rewardFarm, depositAmount, address(this), receiver);
+            // NOTE: Farm will call this.transferCallback to transfer the reward token to the farm from self
+            rewardToken.approve(address(this), _amountLD);
+            rewardFarm.depositERC20(_amountLD, address(this), receiver);
+
+            emit Deposit(rewardFarm, _amountLD, address(this), receiver);
         } else {
             revert InvalidOpt(opt);
         }
@@ -812,13 +811,13 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         view
         returns (SendParam memory)
     {
-        bytes memory composeMsg = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(amount, receiver));
+        bytes memory composeMsg = abi.encode(LZ_COMPOSE_OPT.DEPOSIT_REWARD_TOKEN, abi.encode(receiver));
 
         return SendParam(
             dstInfo.dstEid,
             dstInfo.dstFarmManagerBytes32,
             amount,
-            amount,
+            0, /* minAmountLD */
             extraOptions,
             composeMsg,
             "" // oftCmd
