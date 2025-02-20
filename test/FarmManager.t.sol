@@ -188,7 +188,7 @@ contract FarmManagerTest is BaseTest {
             ExecuteClaimParams({
                 farm: farm,
                 amount: claimAmount,
-                owner: user1,
+                receiver: user1,
                 claimableTime: claimableTime,
                 nonce: nonce,
                 claimId: claimId
@@ -198,13 +198,13 @@ contract FarmManagerTest is BaseTest {
 
         // try to claim other user's reward, should revert
         vm.startPrank(user2);
-        bytes32 fakeClaimId = keccak256(abi.encode(claimAmount, user1, user2, claimableTime, nonce));
+        bytes32 fakeClaimId = keccak256(abi.encode(claimAmount, user2, user1, claimableTime, nonce));
         vm.expectRevert(abi.encodeWithSelector(IFarm.InvalidClaimId.selector, claimId, fakeClaimId));
         farmManager.executeClaim(
             ExecuteClaimParams({
                 farm: farm,
                 amount: claimAmount,
-                owner: user1,
+                receiver: user1,
                 claimableTime: claimableTime,
                 nonce: nonce,
                 claimId: claimId
@@ -225,7 +225,7 @@ contract FarmManagerTest is BaseTest {
             ExecuteClaimParams({
                 farm: farm,
                 amount: claimAmount,
-                owner: user1,
+                receiver: user1,
                 claimableTime: claimableTime,
                 nonce: nonce,
                 claimId: claimId
