@@ -91,6 +91,14 @@ contract Farm is IFarm, Initializable {
         _;
     }
 
+    /**
+     * @notice Farm contract constructor
+     * @dev Inherit Beacon proxy upgrade pattern and disable initializers in the constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @inheritdoc IFarm
     function initialize(
         address _underlyingAsset,
@@ -327,6 +335,21 @@ contract Farm is IFarm, Initializable {
     /// @inheritdoc IFarm
     function isClaimable() external view returns (bool) {
         return _isClaimable();
+    }
+
+    /// @inheritdoc IFarm
+    function getClaimId(
+        uint256 amount,
+        address owner,
+        address receiver,
+        uint256 claimableTime,
+        uint256 nonce
+    )
+        external
+        pure
+        returns (bytes32)
+    {
+        return _calcClaimId(amount, owner, receiver, claimableTime, nonce);
     }
 
     /* --- internal functions --- */
@@ -828,8 +851,8 @@ contract Farm is IFarm, Initializable {
         internal
         pure
     {
-        bytes32 expectedClaimId = _calcClaimId(amount, owner, receiver, claimableTime, nonce);
-        if (claimId != expectedClaimId) revert InvalidClaimId(claimId, expectedClaimId);
+        bytes32 calcClaimId = _calcClaimId(amount, owner, receiver, claimableTime, nonce);
+        if (claimId != calcClaimId) revert InvalidClaimId(claimId, calcClaimId);
     }
 
     /**
@@ -867,9 +890,12 @@ contract Farm is IFarm, Initializable {
      * @notice Check farm config is valid
      * @param _farmConfig The farm config
      */
-    function _checkFarmConfig(FarmConfig memory _farmConfig) internal pure {
+    function _checkFarmConfig(FarmConfig memory _farmConfig) internal view {
         if (_farmConfig.rewardEndTime < _farmConfig.rewardStartTime) {
             revert InvalidConfigRewardTime(_farmConfig.rewardStartTime, _farmConfig.rewardEndTime);
+        }
+        if (_farmConfig.rewardEndTime <= _lastUpdateTime) {
+            revert InvalidRewardEndTime(_farmConfig.rewardEndTime, _lastUpdateTime);
         }
         if (_farmConfig.depositEndTime < _farmConfig.depositStartTime) {
             revert InvalidConfigDepositTime(_farmConfig.depositStartTime, _farmConfig.depositEndTime);

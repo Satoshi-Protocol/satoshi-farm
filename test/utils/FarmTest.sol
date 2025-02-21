@@ -226,7 +226,7 @@ contract FarmTest is Test {
 
         vm.expectEmit(true, true, true, true);
         emit IFarmManager.ClaimExecuted(
-            params.farm, params.amount, user, params.owner, params.claimableTime, params.nonce, params.claimId
+            params.farm, params.amount, user, params.receiver, params.claimableTime, params.nonce, params.claimId
         );
 
         farmManager.executeClaim(params);

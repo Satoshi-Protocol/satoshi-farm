@@ -101,7 +101,6 @@ abstract contract BaseTest is DeployBase {
             ExecuteClaimParams({
                 farm: farm,
                 amount: amount,
-                owner: user,
                 receiver: user,
                 claimableTime: claimableTime,
                 nonce: nonce,
