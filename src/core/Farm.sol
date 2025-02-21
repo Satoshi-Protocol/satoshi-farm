@@ -559,8 +559,6 @@ contract Farm is IFarm, Initializable {
     )
         internal
     {
-        _checkIsClaimable();
-
         _checkClaimId(amount, owner, receiver, claimableTime, nonce, claimId);
 
         _updateReward(owner);
