@@ -205,8 +205,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    /// @dev This function is `external` because it handles `msg.value` and may refund excess native assets.
     function depositNativeAssetWithProof(DepositWithProofParams memory depositWithProofParams)
-        public
+        external
         payable
         whenNotPaused
     {
@@ -223,20 +224,42 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         farm.depositNativeAssetWithProof{ value: amount }(amount, msg.sender, receiver, merkleProof);
 
+        if (msg.value > amount) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - amount);
+        }
+
         emit DepositWithProof(farm, amount, msg.sender, receiver, merkleProof);
     }
 
     /// @inheritdoc IFarmManager
+    /// @dev `msg.value` is shared across the entire transaction, so this batch function cannot simply loop over `depositNativeAssetWithProof`.
+    /// Doing so would cause incorrect fee handling and multiple refunds.
+    /// Instead, fees are accumulated and processed once at the end.
     function depositNativeAssetWithProofBatch(DepositWithProofParams[] memory depositWithProofParamsArr)
         public
         payable
         whenNotPaused
     {
         uint256 totalDepositAmount;
+
         for (uint256 i = 0; i < depositWithProofParamsArr.length; i++) {
             DepositWithProofParams memory depositWithProofParams = depositWithProofParamsArr[i];
+
+            (IFarm farm, uint256 amount, address receiver, bytes32[] memory merkleProof) = (
+                depositWithProofParams.farm,
+                depositWithProofParams.amount,
+                depositWithProofParams.receiver,
+                depositWithProofParams.merkleProof
+            );
+
+            _checkFarmIsValid(farm);
+
+            farm.depositNativeAssetWithProof{ value: amount }(amount, msg.sender, receiver, merkleProof);
+
             totalDepositAmount += depositWithProofParams.amount;
-            depositNativeAssetWithProof(depositWithProofParams);
+
+            emit DepositWithProof(farm, amount, msg.sender, receiver, merkleProof);
         }
 
         _checkTotalAmount(totalDepositAmount, msg.value);
@@ -274,7 +297,8 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function depositNativeAsset(DepositParams memory depositParams) public payable whenNotPaused {
+    /// @dev This function is `external` because it handles `msg.value` and may refund excess native assets.
+    function depositNativeAsset(DepositParams memory depositParams) external payable whenNotPaused {
         (IFarm farm, uint256 amount, address receiver) =
             (depositParams.farm, depositParams.amount, depositParams.receiver);
 
@@ -284,16 +308,34 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         farm.depositNativeAsset{ value: amount }(amount, msg.sender, receiver);
 
+        if (msg.value > amount) {
+            // refund the remaining native asset
+            _refundNativeAsset(msg.value - amount);
+        }
+
         emit Deposit(farm, amount, msg.sender, receiver);
     }
 
     /// @inheritdoc IFarmManager
+    /// @dev `msg.value` is shared across the entire transaction, so this batch function cannot simply loop over `depositNativeAsset`.
+    /// Doing so would cause incorrect fee handling and multiple refunds. 
+    /// Instead, fees are accumulated and processed once at the end.
     function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) public payable whenNotPaused {
         uint256 totalDepositAmount;
+
         for (uint256 i = 0; i < depositParamsArr.length; i++) {
             DepositParams memory depositParams = depositParamsArr[i];
+
+            (IFarm farm, uint256 amount, address receiver) =
+                (depositParams.farm, depositParams.amount, depositParams.receiver);
+
+            _checkFarmIsValid(farm);
+
+            farm.depositNativeAsset{ value: amount }(amount, msg.sender, receiver);
+
             totalDepositAmount += depositParams.amount;
-            depositNativeAsset(depositParams);
+
+            emit Deposit(farm, amount, msg.sender, receiver);
         }
 
         _checkTotalAmount(totalDepositAmount, msg.value);
@@ -461,7 +503,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    /// @dev `msg.value` is shared across the entire transaction, so this batch function cannot simply loop over `claimAndStakeCrossChain`.
+    /// @dev `msg.value` is shared across the entire transaction, so this batch function cannot simply loop over `stakePendingClaimCrossChain`.
     /// Doing so would cause incorrect fee handling and multiple refunds.
     /// Instead, fees are accumulated and processed once at the end.
     function stakePendingClaimCrossChainBatch(
