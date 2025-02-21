@@ -318,7 +318,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     /// @inheritdoc IFarmManager
     /// @dev `msg.value` is shared across the entire transaction, so this batch function cannot simply loop over `depositNativeAsset`.
-    /// Doing so would cause incorrect fee handling and multiple refunds. 
+    /// Doing so would cause incorrect fee handling and multiple refunds.
     /// Instead, fees are accumulated and processed once at the end.
     function depositNativeAssetBatch(DepositParams[] memory depositParamsArr) public payable whenNotPaused {
         uint256 totalDepositAmount;
