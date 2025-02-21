@@ -3,13 +3,13 @@ pragma solidity ^0.8.20;
 
 import { FarmConfig } from "../src/core/interfaces/IFarm.sol";
 
-address constant FARM_MANAGER_ADDRESS = 0xefd8C52b3aF1b142FBCEb7EA0d3cddc82058e3F8;
-address constant UNDERLYING_ASSET_ADDRESS = 0xA5f4422532a06e51f899D74D03b0507184141FCA;
+address constant FARM_MANAGER_ADDRESS = 0x1538b8A949e9a396B377F2607516E4852d475936;
+address constant UNDERLYING_ASSET_ADDRESS = 0x59fdaB9956C5Dc85f2b9ceC31551cAb6f9C3897D;
 
 abstract contract DeployFarmConfig {
     FarmConfig internal FARM_CONFIG = FarmConfig({
-        depositCap: type(uint256).max,
-        depositCapPerUser: type(uint256).max,
+        depositCap: 1000e18,
+        depositCapPerUser: 10e18,
         depositStartTime: uint32(block.timestamp),
         depositEndTime: type(uint32).max,
         rewardRate: 28_935_185_185_185_184,

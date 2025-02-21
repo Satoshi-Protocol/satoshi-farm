@@ -114,7 +114,6 @@ contract FarmManagerERC20FuzzTest is Test, DeployBase {
             ExecuteClaimParams({
                 farm: farm,
                 amount: claimAmt,
-                owner: user,
                 receiver: user,
                 claimableTime: claimableTime,
                 nonce: nonce,

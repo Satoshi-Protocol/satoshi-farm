@@ -8,6 +8,11 @@ import { FarmConfig, IFarm } from "../../src/core/interfaces/IFarm.sol";
 import { DstInfo, IFarmManager, LzConfig } from "../../src/core/interfaces/IFarmManager.sol";
 import { IRewardToken } from "../../src/core/interfaces/IRewardToken.sol";
 
+import { Gold } from "../../src/Gold/Gold.sol";
+import { GoldAirdrop } from "../../src/Gold/GoldAirdrop.sol";
+import { IGold } from "../../src/Gold/interfaces/IGold.sol";
+import { IGoldAirdrop } from "../../src/Gold/interfaces/IGoldAirdrop.sol";
+
 import { DEPLOYER, OWNER, TestConfig } from "./TestConfig.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
@@ -95,6 +100,22 @@ abstract contract DeployBase is Test, TestConfig {
         (, IFarm dstRewardFarm,) = farmManager.dstInfo();
         rewardFarm = dstRewardFarm;
 
+        vm.stopPrank();
+    }
+
+    function _deployGold(address deployer) internal returns (IGold gold, IGoldAirdrop goldAirdrop) {
+        vm.startPrank(deployer);
+
+        address goldImpl = address(new Gold());
+        bytes memory goldData = abi.encodeCall(Gold.initialize, ("Gold", "GOLD"));
+        gold = IGold(address(new ERC1967Proxy(goldImpl, goldData)));
+
+        address goldAirdropImpl = address(new GoldAirdrop());
+        bytes memory goldAirdropData =
+            abi.encodeCall(GoldAirdrop.initialize, (address(gold), block.timestamp, type(uint256).max, bytes32(0)));
+        goldAirdrop = IGoldAirdrop(address(new ERC1967Proxy(goldAirdropImpl, goldAirdropData)));
+
+        gold.rely(address(goldAirdrop));
         vm.stopPrank();
     }
 
