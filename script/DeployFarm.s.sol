@@ -10,7 +10,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { DeployFarmConfig, FARM_MANAGER_ADDRESS, UNDERLYING_ASSET_ADDRESS } from "./DeployFarmConfig.sol";
 
-contract DeploySetupScript is Script, DeployFarmConfig {
+contract DeployFarmScript is Script, DeployFarmConfig {
     uint256 internal OWNER_PRIVATE_KEY;
     IFarmManager farmManager;
     IERC20 underlyingAsset;
