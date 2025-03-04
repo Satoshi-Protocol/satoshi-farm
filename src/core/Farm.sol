@@ -779,7 +779,7 @@ contract Farm is IFarm, Initializable {
      */
     function _calcUserReward(address addr, uint256 rewardPerToken) internal view returns (uint256) {
         // calculate reward amount
-        return FarmMath.computeReward(farmConfig, _shares[addr], rewardPerToken, _lastUserRewardPerToken[addr]);
+        return FarmMath.computeReward(_shares[addr], rewardPerToken, _lastUserRewardPerToken[addr]);
     }
 
     /**

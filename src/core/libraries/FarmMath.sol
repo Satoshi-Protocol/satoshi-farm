@@ -14,27 +14,19 @@ library FarmMath {
 
     /**
      * @notice Computes the reward for a user
-     * @param farmConfig The farm configuration
      * @param share The user's share
      * @param lastRewardPerToken The last reward per token
      * @param lastUserRewardPerToken The last user reward per token
      */
     function computeReward(
-        FarmConfig memory farmConfig,
         uint256 share,
         uint256 lastRewardPerToken,
         uint256 lastUserRewardPerToken
     )
         internal
-        view
+        pure
         returns (uint256)
     {
-        if (farmConfig.rewardStartTime == 0 || farmConfig.rewardEndTime == 0) {
-            return 0;
-        }
-        if (block.timestamp < farmConfig.rewardStartTime) {
-            return 0;
-        }
         return Math.mulDiv(share, (lastRewardPerToken - lastUserRewardPerToken), REWARD_PER_TOKEN_PRECISION);
     }
 
