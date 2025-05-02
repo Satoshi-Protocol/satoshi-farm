@@ -9,6 +9,7 @@ import { Test } from "forge-std/Test.sol";
 
 address constant DEPLOYER = 0x1234567890123456789012345678901234567890;
 address constant OWNER = 0x1111111111111111111111111111111111111111;
+address constant FEE_RECEIVER = 0x2222222222222222222222222222222222222222;
 address constant MOCK_LZ_ENDPOINT = 0x6EDCE65403992e310A62460808c4b910D972f10f;
 address constant MOCK_REFUND_ADDR = 0x2234567890123456789012345678901234567890;
 
@@ -24,6 +25,7 @@ abstract contract TestConfig {
         claimStartTime: type(uint32).max,
         claimEndTime: type(uint32).max,
         claimDelayTime: 0,
+        withdrawFee: 0,
         withdrawEnabled: false,
         forceClaimEnabled: false
     });
@@ -39,6 +41,7 @@ abstract contract TestConfig {
         claimStartTime: uint32(block.timestamp + 30 days),
         claimEndTime: uint32(block.timestamp + 60 days),
         claimDelayTime: uint32(1 days),
+        withdrawFee: 0,
         withdrawEnabled: true,
         forceClaimEnabled: true
     });

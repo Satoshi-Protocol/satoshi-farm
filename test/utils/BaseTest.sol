@@ -50,8 +50,10 @@ abstract contract BaseTest is DeployBase {
         vm.startPrank(user);
 
         // Expect Withdraw event
+        (, uint256 withdrawFeeAmount) = farmManager.previewWithdrawFeeAmount(farm, amount);
+        uint256 withdrawAfterFee = amount - withdrawFeeAmount;
         vm.expectEmit(true, true, true, true);
-        emit IFarmManager.Withdraw(farm, amount, user, receiver);
+        emit IFarmManager.Withdraw(farm, amount, withdrawAfterFee, withdrawFeeAmount, user, receiver);
 
         farmManager.withdraw(WithdrawParams({ farm: farm, amount: amount, receiver: receiver }));
 
@@ -139,7 +141,7 @@ abstract contract BaseTest is DeployBase {
         view
         returns (uint256, bytes32)
     {
-        (,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
+        (,,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
         uint256 claimableTime = currentTime + claimDelayTime;
         return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime, nonce)));
     }

@@ -39,9 +39,9 @@ contract DeployTestnet is Script, ArbSepTestnetConfig {
     IFarmManager farmManager;
 
     function setUp() public {
-        DEPLOYER_PRIVATE_KEY = 0x1a978a4c18fa639d73c8aa9a289ac9a30eeadc1b7ccdfa7ddf128f280686e1c0; // uint256(vm.envBytes32("DEPLOYER_PRIVATE_KEY"));
+        DEPLOYER_PRIVATE_KEY = uint256(vm.envBytes32("DEPLOYER_PRIVATE_KEY"));
         deployer = vm.addr(DEPLOYER_PRIVATE_KEY);
-        OWNER_PRIVATE_KEY = 0x1a978a4c18fa639d73c8aa9a289ac9a30eeadc1b7ccdfa7ddf128f280686e1c0; // uint256(vm.envBytes32("OWNER_PRIVATE_KEY"));
+        OWNER_PRIVATE_KEY = uint256(vm.envBytes32("OWNER_PRIVATE_KEY"));
         owner = vm.addr(OWNER_PRIVATE_KEY);
     }
 
@@ -65,6 +65,7 @@ contract DeployTestnet is Script, ArbSepTestnetConfig {
             (
                 farmBeacon,
                 IRewardToken(REWARD_TOKEN_ADDRESS),
+                FEE_RECEIVER,
                 DST_INFO,
                 LZ_CONFIG,
                 TestnetConfigHelper.getRewardFarmConfig()

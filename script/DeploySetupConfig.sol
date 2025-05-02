@@ -5,6 +5,7 @@ import { FarmConfig, IFarm } from "../src/core/interfaces/IFarm.sol";
 import { DstInfo, LzConfig } from "../src/core/interfaces/IFarmManager.sol";
 
 address constant REWARD_TOKEN_ADDRESS = 0x44621f077464a41849E2e3E972e07CBF6999c508;
+address constant FEE_RECEIVER = 0xC7a072bE57f3370BE7148d4F67442dAC26DB3D6F;
 
 abstract contract DeploySetupConfig {
     FarmConfig internal REWARD_FARM_CONFIG = FarmConfig({
@@ -18,6 +19,7 @@ abstract contract DeploySetupConfig {
         claimStartTime: type(uint32).max,
         claimEndTime: type(uint32).max,
         claimDelayTime: 0,
+        withdrawFee: 0,
         withdrawEnabled: false,
         forceClaimEnabled: false
     });

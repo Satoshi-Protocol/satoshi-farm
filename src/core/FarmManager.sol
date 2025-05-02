@@ -49,6 +49,8 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     /// @inheritdoc IFarmManager
     IRewardToken public rewardToken;
     /// @inheritdoc IFarmManager
+    address public feeReceiver;
+    /// @inheritdoc IFarmManager
     mapping(IFarm => bool) public validFarms;
 
     /// @inheritdoc IFarmManager
@@ -104,6 +106,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     function initialize(
         IBeacon _farmBeacon,
         IRewardToken _rewardToken,
+        address _feeReceiver,
         DstInfo memory _dstInfo,
         LzConfig memory _lzConfig,
         FarmConfig memory _farmConfig
@@ -113,6 +116,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     {
         _checkIsNotZeroAddress(address(_farmBeacon));
         _checkIsNotZeroAddress(address(_rewardToken));
+        _checkIsNotZeroAddress(_feeReceiver);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -120,6 +124,9 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         farmBeacon = _farmBeacon;
         rewardToken = _rewardToken;
+        feeReceiver = _feeReceiver;
+        
+        emit FeeReceiverUpdated(_feeReceiver);
 
         // if dstEid is current chain, create reward farm
         if (_dstInfo.dstEid == _lzConfig.eid) {
@@ -166,6 +173,13 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         dstInfo = _dstInfo;
         emit DstInfoUpdated(_dstInfo);
+    }
+
+    /// @inheritdoc IFarmManager
+    function updateFeeReceiver(address _feeReceiver) external onlyOwner {
+        _checkIsNotZeroAddress(_feeReceiver);
+        feeReceiver = _feeReceiver;
+        emit FeeReceiverUpdated(_feeReceiver);
     }
 
     /// @inheritdoc IFarmManager
@@ -372,8 +386,8 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        farm.withdraw(amount, msg.sender, receiver);
-        emit Withdraw(farm, amount, msg.sender, receiver);
+        (uint256 amountAfterFee, uint256 withdrawFeeAmount) = farm.withdraw(amount, msg.sender, receiver);
+        emit Withdraw(farm, amount, amountAfterFee, withdrawFeeAmount, msg.sender, receiver);
     }
 
     /// @inheritdoc IFarmManager
@@ -715,6 +729,11 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    function previewWithdrawFeeAmount(IFarm farm, uint256 amount) external view returns (uint16, uint256) {
+        return farm.previewWithdrawFeeAmount(amount);
+    }
+
+    /// @inheritdoc IFarmManager
     function lastRewardPerToken(IFarm farm) external view returns (uint256) {
         return farm.lastRewardPerToken();
     }
@@ -772,6 +791,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             uint32 claimStartTime,
             uint32 claimEndTime,
             uint32 claimDelayTime,
+            uint16 withdrawFee,
             bool withdrawEnabled,
             bool instantClaimEnabled
         ) = farm.farmConfig();
@@ -787,6 +807,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
             claimStartTime,
             claimEndTime,
             claimDelayTime,
+            withdrawFee,
             withdrawEnabled,
             instantClaimEnabled
         );

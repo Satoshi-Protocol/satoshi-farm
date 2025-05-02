@@ -190,8 +190,12 @@ contract FarmTest is Test {
         vm.startPrank(user);
 
         // Expect Withdraw event
+        (, uint256 withdrawFeeAmount) = farmManager.previewWithdrawFeeAmount(params.farm, params.amount);
+        uint256 withdrawAfterFee = params.amount - withdrawFeeAmount;
         vm.expectEmit(true, true, true, true);
-        emit IFarmManager.Withdraw(params.farm, params.amount, user, params.receiver);
+        emit IFarmManager.Withdraw(
+            params.farm, params.amount, withdrawAfterFee, withdrawFeeAmount, user, params.receiver
+        );
 
         farmManager.withdraw(params);
 
@@ -255,7 +259,7 @@ contract FarmTest is Test {
         view
         returns (uint256, bytes32)
     {
-        (,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
+        (,,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
         uint256 claimableTime = currentTime + claimDelayTime;
         return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime, nonce)));
     }

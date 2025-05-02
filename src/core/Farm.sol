@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { ClaimStatus, DEFAULT_NATIVE_ASSET_ADDRESS, FarmConfig, IFarm, WhitelistConfig } from "./interfaces/IFarm.sol";
+import {
+    ClaimStatus,
+    DEFAULT_NATIVE_ASSET_ADDRESS,
+    FEE_BASE,
+    FarmConfig,
+    IFarm,
+    WhitelistConfig
+} from "./interfaces/IFarm.sol";
 
 import { DepositParams, IFarmManager } from "./interfaces/IFarmManager.sol";
 import { IRewardToken } from "./interfaces/IRewardToken.sol";
@@ -12,6 +19,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title Farm contract
@@ -22,6 +30,7 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
 contract Farm is IFarm, Initializable {
     using SafeERC20 for IERC20;
     using SafeERC20 for IRewardToken;
+    using Math for uint256;
 
     /* --- state variables --- */
 
@@ -127,6 +136,12 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
+    function updateWithdrawFee(uint16 _withdrawFee) external onlyFarmManager {
+        farmConfig.withdrawFee = _withdrawFee;
+        emit FarmConfigUpdated(farmConfig);
+    }
+
+    /// @inheritdoc IFarm
     function updateFarmConfig(FarmConfig memory _farmConfig) external onlyFarmManager {
         _checkFarmConfig(_farmConfig);
         _updateLastRewardPerToken(_calcRewardPerToken());
@@ -205,10 +220,19 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
-    function withdraw(uint256 amount, address owner, address receiver) external onlyFarmManager onlyWithdrawEnabled {
+    function withdraw(
+        uint256 amount,
+        address owner,
+        address receiver
+    )
+        external
+        onlyFarmManager
+        onlyWithdrawEnabled
+        returns (uint256, uint256)
+    {
         _beforeWithdraw(amount, owner, receiver);
 
-        _withdraw(amount, owner, receiver);
+        (uint256 amountAfterFee, uint256 withdrawFeeAmount) = _withdraw(amount, owner, receiver);
     }
 
     /// @inheritdoc IFarm
@@ -282,9 +306,19 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
+    function feeReceiver() external view returns (address) {
+        return farmManager.feeReceiver();
+    }
+
+    /// @inheritdoc IFarm
     function previewReward(address addr) external view returns (uint256) {
         uint256 rewardAmount = _calcUserReward(addr, _calcRewardPerToken());
         return rewardAmount + _pendingRewards[addr];
+    }
+
+    /// @inheritdoc IFarm
+    function previewWithdrawFeeAmount(uint256 amount) external view returns (uint16, uint256) {
+        return (farmConfig.withdrawFee, amount.mulDiv(farmConfig.withdrawFee, FEE_BASE));
     }
 
     /// @inheritdoc IFarm
@@ -476,20 +510,36 @@ contract Farm is IFarm, Initializable {
      * @param amount The withdraw amount
      * @param owner The owner address
      * @param receiver The receiver address
+     * @return The amount after fee
+     * @return The withdraw fee amount
      */
-    function _withdraw(uint256 amount, address owner, address receiver) internal {
+    function _withdraw(uint256 amount, address owner, address receiver) internal returns (uint256, uint256) {
         _updateShares(amount, owner, false);
+
+        uint256 withdrawFeeAmount = (amount.mulDiv(farmConfig.withdrawFee, FEE_BASE));
+        uint256 amountAfterFee = amount - withdrawFeeAmount;
 
         if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
             // case1: withdraw native asset
-            (bool success,) = receiver.call{ value: amount }("");
-            if (!success) revert TransferNativeAssetFailed();
+            if (withdrawFeeAmount > 0) {
+                // transfer fee to fee receiver
+                (bool successTrfFee,) = farmManager.feeReceiver().call{ value: withdrawFeeAmount }("");
+                if (!successTrfFee) revert TransferNativeAssetFailed();
+            }
+
+            (bool successTrfAmt,) = receiver.call{ value: amountAfterFee }("");
+            if (!successTrfAmt) revert TransferNativeAssetFailed();
         } else {
             // case2: withdraw ERC20 token
-            underlyingAsset.safeTransfer(receiver, amount);
+            if (withdrawFeeAmount > 0) {
+                // transfer fee to fee receiver
+                underlyingAsset.safeTransfer(farmManager.feeReceiver(), withdrawFeeAmount);
+            }
+            underlyingAsset.safeTransfer(receiver, amountAfterFee);
         }
 
-        emit Withdraw(amount, owner, receiver);
+        emit Withdraw(amount, amountAfterFee, withdrawFeeAmount, owner, receiver);
+        return (amountAfterFee, withdrawFeeAmount);
     }
 
     /**

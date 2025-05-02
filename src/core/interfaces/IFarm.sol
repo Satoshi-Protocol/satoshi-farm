@@ -8,6 +8,8 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 // Use default native asset address if the underlying asset is native asset
 address constant DEFAULT_NATIVE_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+// Fee base (i.e. 500 = 5%)
+uint16 constant FEE_BASE = 10_000;
 
 /**
  * @notice The farm configuration
@@ -21,6 +23,7 @@ address constant DEFAULT_NATIVE_ASSET_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEe
  * @param claimStartTime claim start time
  * @param claimEndTime claim end time
  * @param claimDelayTime delay time for claim
+ * @param withdrawFee withdraw fee (based on 10000, i.e. 10000 = 100%)
  * @param withdrawEnabled is withdraw enabled
  * @param forceClaimEnabled is force claim enabled
  */
@@ -35,6 +38,7 @@ struct FarmConfig {
     uint32 claimStartTime;
     uint32 claimEndTime;
     uint32 claimDelayTime;
+    uint16 withdrawFee;
     bool withdrawEnabled;
     bool forceClaimEnabled;
 }
@@ -100,7 +104,9 @@ interface IFarm {
 
     event FarmConfigUpdated(FarmConfig farmConfig);
     event Deposit(uint256 indexed amount, address depositor, address receiver);
-    event Withdraw(uint256 indexed amount, address owner, address receiver);
+    event Withdraw(
+        uint256 indexed amount, uint256 amountAfterFee, uint256 withdrawFeeAmount, address owner, address receiver
+    );
     event ClaimRequested(
         bytes32 indexed claimId,
         uint256 indexed amount,
@@ -133,6 +139,12 @@ interface IFarm {
      * @param _rewardRate The new reward rate
      */
     function updateRewardRate(uint256 _rewardRate) external;
+
+    /**
+     * @notice Update the withdraw fee
+     * @param _withdrawFee The new withdraw fee (based on 10000, i.e. 10000 = 100%)
+     */
+    function updateWithdrawFee(uint16 _withdrawFee) external;
 
     /**
      * @notice Update the farm configuration
@@ -204,8 +216,16 @@ interface IFarm {
      * @param amount The amount of the underlying asset
      * @param receiver The address of the receiver
      * @param owner The address of the owner
+     * @return amountAfterFee The amount after fee
+     * @return withdrawFeeAmount The withdraw fee amount
      */
-    function withdraw(uint256 amount, address receiver, address owner) external;
+    function withdraw(
+        uint256 amount,
+        address receiver,
+        address owner
+    )
+        external
+        returns (uint256 amountAfterFee, uint256 withdrawFeeAmount);
 
     /**
      * @notice Request claim reward token
@@ -306,6 +326,14 @@ interface IFarm {
     function previewReward(address addr) external view returns (uint256 reward);
 
     /**
+     * @notice Preview withdraw fee amount
+     * @param amount The amount of the underlying asset
+     * @return withdrawFee The withdraw fee rate (based on 10000, i.e. 10000 = 100%)
+     * @return withdrawFeeAmount The withdraw fee amount
+     */
+    function previewWithdrawFeeAmount(uint256 amount) external view returns (uint16, uint256);
+
+    /**
      * @notice Last reward per token
      * @return lastRewardPerToken The last reward per token
      */
@@ -390,6 +418,12 @@ interface IFarm {
     function farmManager() external view returns (IFarmManager farmManager);
 
     /**
+     * @notice fee receiver of the farm
+     * @return feeReceiver The address of the fee receiver
+     */
+    function feeReceiver() external view returns (address feeReceiver);
+
+    /**
      * @notice farm config of the farm
      * @return depositCap The deposit cap
      * @return depositCapPerUser The deposit cap per user
@@ -401,6 +435,7 @@ interface IFarm {
      * @return claimStartTime The claim start time
      * @return claimEndTime The claim end time
      * @return claimDelayTime The claim delay time
+     * @return withdrawFee The withdraw fee
      * @return withdrawEnabled The withdraw enabled
      * @return forceClaimEnabled The force claim enabled
      */
@@ -418,6 +453,7 @@ interface IFarm {
             uint32 claimStartTime,
             uint32 claimEndTime,
             uint32 claimDelayTime,
+            uint16 withdrawFee,
             bool withdrawEnabled,
             bool forceClaimEnabled
         );

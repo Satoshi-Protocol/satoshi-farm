@@ -87,7 +87,7 @@ contract FarmManagerNativeAssetFuzzTest is Test, DeployBase {
         // Assume: parameters are within valid ranges
         vm.assume(depositAmount > 0 && depositAmount <= INITIAL_BALANCE);
 
-        (,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
+        (,,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
 
         vm.assume(intervalInDays > (claimDelayTime / 1 days) && intervalInDays < 59);
 
@@ -165,6 +165,7 @@ contract FarmManagerNativeAssetFuzzTest is Test, DeployBase {
             claimStartTime: uint32(block.timestamp),
             claimEndTime: uint32(block.timestamp + 60 days),
             claimDelayTime: 1 days,
+            withdrawFee: 0,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });

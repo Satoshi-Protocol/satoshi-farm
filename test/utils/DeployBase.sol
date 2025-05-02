@@ -13,7 +13,7 @@ import { GoldAirdrop } from "../../src/Gold/GoldAirdrop.sol";
 import { IGold } from "../../src/Gold/interfaces/IGold.sol";
 import { IGoldAirdrop } from "../../src/Gold/interfaces/IGoldAirdrop.sol";
 
-import { DEPLOYER, OWNER, TestConfig } from "./TestConfig.sol";
+import { DEPLOYER, FEE_RECEIVER, OWNER, TestConfig } from "./TestConfig.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -88,13 +88,15 @@ abstract contract DeployBase is Test, TestConfig {
     function _deployFarmManager(address deployer) internal {
         vm.startPrank(deployer);
 
-        assert(address(rewardToken) != address(0));
         assert(address(farmBeacon) != address(0));
+        assert(address(rewardToken) != address(0));
+        assert(FEE_RECEIVER != address(0));
         DstInfo memory dstInfo = DEFAULT_DST_INFO;
         LzConfig memory lzConfig = DEFAULT_LZ_CONFIG;
         FarmConfig memory farmConfig = DEFAULT_REWARD_FARM_CONFIG;
-        bytes memory data =
-            abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardToken, dstInfo, lzConfig, farmConfig));
+        bytes memory data = abi.encodeCall(
+            FarmManager.initialize, (farmBeacon, rewardToken, FEE_RECEIVER, dstInfo, lzConfig, farmConfig)
+        );
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
         (, IFarm dstRewardFarm,) = farmManager.dstInfo();

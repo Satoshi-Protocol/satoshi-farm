@@ -15,7 +15,7 @@ import { Script, console } from "forge-std/Script.sol";
 import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import { DeploySetupConfig, REWARD_TOKEN_ADDRESS } from "./DeploySetupConfig.sol";
+import { DeploySetupConfig, FEE_RECEIVER, REWARD_TOKEN_ADDRESS } from "./DeploySetupConfig.sol";
 
 contract DeploySetupScript is Script, DeploySetupConfig {
     uint256 internal DEPLOYER_PRIVATE_KEY;
@@ -53,8 +53,9 @@ contract DeploySetupScript is Script, DeploySetupConfig {
         farmBeacon = new UpgradeableBeacon(address(farmImpl), owner);
 
         // deploy farm manager proxy
-        bytes memory data =
-            abi.encodeCall(FarmManager.initialize, (farmBeacon, rewardToken, DST_INFO, LZ_CONFIG, REWARD_FARM_CONFIG));
+        bytes memory data = abi.encodeCall(
+            FarmManager.initialize, (farmBeacon, rewardToken, FEE_RECEIVER, DST_INFO, LZ_CONFIG, REWARD_FARM_CONFIG)
+        );
         farmManager = IFarmManager(address(new ERC1967Proxy(address(farmManagerImpl), data)));
 
         vm.stopBroadcast();

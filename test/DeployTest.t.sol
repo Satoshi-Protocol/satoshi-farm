@@ -43,6 +43,7 @@ contract DeployTest is Test, DeployBase {
             uint32 claimStartTime,
             uint32 claimEndTime,
             uint32 claimDelayTime,
+            uint16 withdrawFee,
             bool withdrawEnabled,
             bool forceClaimEnabled
         ) = farm.farmConfig();
@@ -57,6 +58,7 @@ contract DeployTest is Test, DeployBase {
         assertEq(claimStartTime, DEFAULT_FARM_CONFIG.claimStartTime);
         assertEq(claimEndTime, DEFAULT_FARM_CONFIG.claimEndTime);
         assertEq(claimDelayTime, DEFAULT_FARM_CONFIG.claimDelayTime);
+        assertEq(withdrawFee, DEFAULT_FARM_CONFIG.withdrawFee);
         assertEq(withdrawEnabled, DEFAULT_FARM_CONFIG.withdrawEnabled);
         assertEq(forceClaimEnabled, DEFAULT_FARM_CONFIG.forceClaimEnabled);
 

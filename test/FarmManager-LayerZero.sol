@@ -91,6 +91,7 @@ contract FarmManagerLayerZeroTest is Test, DeployBase {
             claimStartTime: uint32(block.timestamp),
             claimEndTime: uint32(block.timestamp + 60 days),
             claimDelayTime: 1 days,
+            withdrawFee: 0,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });

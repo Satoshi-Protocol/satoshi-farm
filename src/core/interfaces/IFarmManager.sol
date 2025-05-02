@@ -213,6 +213,7 @@ interface IFarmManager is IOAppComposer {
     error TransferNativeAssetFailed(address to, uint256 amount);
 
     event RewardRateUpdated(IFarm farm, uint256 rewardRate);
+    event FeeReceiverUpdated(address feeReceiver);
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
     event WhitelistConfigUpdated(IFarm farm, WhitelistConfig whitelistConfig);
     event LzConfigUpdated(LzConfig lzConfig);
@@ -222,7 +223,14 @@ interface IFarmManager is IOAppComposer {
         IFarm indexed farm, uint256 indexed amount, address sender, address receiver, bytes32[] merkleProof
     );
     event Deposit(IFarm indexed farm, uint256 indexed amount, address sender, address receiver);
-    event Withdraw(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
+    event Withdraw(
+        IFarm indexed farm,
+        uint256 indexed amount,
+        uint256 amountAfterFee,
+        uint256 withdrawFeeAmount,
+        address owner,
+        address receiver
+    );
     event ClaimRequested(
         IFarm indexed farm,
         uint256 indexed amount,
@@ -258,6 +266,7 @@ interface IFarmManager is IOAppComposer {
      * @notice Initialize the farm manager
      * @param farmBeacon The farm beacon contract
      * @param rewardToken The reward token
+     * @param feeReceiver The fee receiver
      * @param dstInfo The reward farm's destination chain information
      * @param lzConfig The current chain's LayerZero configuration
      * @param farmConfig The farm configuration
@@ -265,6 +274,7 @@ interface IFarmManager is IOAppComposer {
     function initialize(
         IBeacon farmBeacon,
         IRewardToken rewardToken,
+        address feeReceiver,
         DstInfo memory dstInfo,
         LzConfig memory lzConfig,
         FarmConfig memory farmConfig
@@ -287,6 +297,12 @@ interface IFarmManager is IOAppComposer {
      * @param rewardRate The new reward rate
      */
     function updateRewardRate(IFarm farm, uint256 rewardRate) external;
+
+    /**
+     * @notice Update the fee receiver
+     * @param feeReceiver The new fee receiver
+     */
+    function updateFeeReceiver(address feeReceiver) external;
 
     /**
      * @notice Update the farm configuration
@@ -543,6 +559,12 @@ interface IFarmManager is IOAppComposer {
     function rewardToken() external view returns (IRewardToken rewardToken);
 
     /**
+     * @notice Get the fee receiver
+     * @return feeReceiver The fee receiver
+     */
+    function feeReceiver() external view returns (address feeReceiver);
+
+    /**
      * @notice farm is valid or not
      * @param farm The farm to query
      * @return isValidFarm The farm is valid or not
@@ -571,6 +593,21 @@ interface IFarmManager is IOAppComposer {
      * @return reward The preview reward of the user
      */
     function previewReward(IFarm farm, address addr) external view returns (uint256 reward);
+
+    /**
+     * @notice Preview withdraw fee amount
+     * @param farm The farm to query
+     * @param amount The amount of the underlying asset
+     * @return withdrawFee The withdraw fee rate (based on 10000, i.e. 10000 = 100%)
+     * @return withdrawFeeAmount The withdraw fee amount
+     */
+    function previewWithdrawFeeAmount(
+        IFarm farm,
+        uint256 amount
+    )
+        external
+        view
+        returns (uint16 withdrawFee, uint256 withdrawFeeAmount);
 
     /**
      * @notice Last reward per token

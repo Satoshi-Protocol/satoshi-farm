@@ -18,6 +18,7 @@ abstract contract DeployFarmConfig {
         claimStartTime: uint32(block.timestamp),
         claimEndTime: type(uint32).max,
         claimDelayTime: 1 days,
+        withdrawFee: 0,
         withdrawEnabled: true,
         forceClaimEnabled: true
     });

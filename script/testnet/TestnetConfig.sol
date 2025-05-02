@@ -39,6 +39,7 @@ library TestnetConfigHelper {
             claimStartTime: uint32(block.timestamp),
             claimEndTime: type(uint32).max,
             claimDelayTime: 20 minutes,
+            withdrawFee: 0,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });
@@ -56,6 +57,7 @@ library TestnetConfigHelper {
             claimStartTime: uint32(block.timestamp),
             claimEndTime: type(uint32).max,
             claimDelayTime: 20 minutes,
+            withdrawFee: 0,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });
@@ -73,6 +75,7 @@ library TestnetConfigHelper {
             claimStartTime: uint32(block.timestamp),
             claimEndTime: type(uint32).max,
             claimDelayTime: 20 minutes,
+            withdrawFee: 0,
             withdrawEnabled: true,
             forceClaimEnabled: true
         });
@@ -90,6 +93,7 @@ library TestnetConfigHelper {
             claimStartTime: uint32(block.timestamp),
             claimEndTime: type(uint32).max,
             claimDelayTime: 20 minutes,
+            withdrawFee: 0,
             withdrawEnabled: false,
             forceClaimEnabled: false
         });
@@ -99,6 +103,8 @@ library TestnetConfigHelper {
 abstract contract ArbSepTestnetConfig {
     address constant REWARD_TOKEN_ADDRESS = address(0x677a4016F631fEDcfC49495998A2d646C9E61943);
     string constant MEME_TOKEN_SYMBOL = "TRX";
+
+    address constant FEE_RECEIVER = 0xC7a072bE57f3370BE7148d4F67442dAC26DB3D6F;
 
     DstInfo DST_INFO = DstInfo({
         dstEid: 40_245,
@@ -117,6 +123,8 @@ abstract contract BaseSepTestnetConfig {
     address constant REWARD_TOKEN_ADDRESS = address(0x8d86D4D688c0584c5C13D66cc85199EC1c587B4c);
     string constant MEME_TOKEN_SYMBOL = "CRV";
 
+    address constant FEE_RECEIVER = 0xC7a072bE57f3370BE7148d4F67442dAC26DB3D6F;
+
     DstInfo DST_INFO = DstInfo({
         dstEid: 40_245,
         dstRewardFarm: IFarm(address(0x132aCdCffCF924c792945B93DE2c27f367F2B081)),
@@ -134,6 +142,8 @@ abstract contract SepoliaTestnetConfig {
     address constant REWARD_TOKEN_ADDRESS = address(0xEb655511b444d0f9eb78ABc6fb7EdFc238d0c7F1);
     string constant MEME_TOKEN_SYMBOL = "HYPE";
 
+    address constant FEE_RECEIVER = 0xC7a072bE57f3370BE7148d4F67442dAC26DB3D6F;
+
     DstInfo DST_INFO = DstInfo({
         dstEid: 40_245,
         dstRewardFarm: IFarm(address(0x132aCdCffCF924c792945B93DE2c27f367F2B081)),
@@ -150,6 +160,8 @@ abstract contract SepoliaTestnetConfig {
 abstract contract HyperliquidTestnetConfig {
     address constant REWARD_TOKEN_ADDRESS = address(0x46Ff6484BeB9B4e368eED4B5bBc5609BE44415eF);
     string constant MEME_TOKEN_SYMBOL = "HYPE";
+
+    address constant FEE_RECEIVER = 0xC7a072bE57f3370BE7148d4F67442dAC26DB3D6F;
 
     DstInfo DST_INFO = DstInfo({
         dstEid: 40_245, // Arbitrum Sepolia chain
@@ -172,6 +184,8 @@ abstract contract HyperliquidTestnetConfig {
 
 abstract contract TestScriptConfig {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    address constant FEE_RECEIVER = 0xC7a072bE57f3370BE7148d4F67442dAC26DB3D6F;
 
     ERC20Mock memeAsset;
     IFarm memeFarm;
