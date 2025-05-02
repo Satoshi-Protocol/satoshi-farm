@@ -233,6 +233,8 @@ contract Farm is IFarm, Initializable {
         _beforeWithdraw(amount, owner, receiver);
 
         (uint256 amountAfterFee, uint256 withdrawFeeAmount) = _withdraw(amount, owner, receiver);
+
+        return (amountAfterFee, withdrawFeeAmount);
     }
 
     /// @inheritdoc IFarm
