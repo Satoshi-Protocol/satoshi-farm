@@ -38,7 +38,6 @@ contract Farm is IFarm, Initializable {
     IERC20 public underlyingAsset;
     /// @inheritdoc IFarm
     IFarmManager public farmManager;
-    /// @inheritdoc IFarm
     FarmConfig public farmConfig;
     /// @inheritdoc IFarm
     WhitelistConfig public whitelistConfig;
@@ -361,6 +360,10 @@ contract Farm is IFarm, Initializable {
     /// @inheritdoc IFarm
     function getNonce(address addr) external view returns (uint256) {
         return _nonces[addr];
+    }
+
+    function getFarmConfig() external view returns (FarmConfig memory) {
+        return farmConfig;
     }
 
     /// @inheritdoc IFarm

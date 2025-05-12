@@ -90,9 +90,9 @@ contract FarmManagerERC20FuzzTest is Test, DeployBase {
         // Assume: parameters are within valid ranges
         vm.assume(depositAmount > 0 && depositAmount <= INITIAL_BALANCE);
 
-        (,,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
+        FarmConfig memory config = farm.getFarmConfig();
 
-        vm.assume(intervalInDays > (claimDelayTime / 1 days) && intervalInDays < 59);
+        vm.assume(intervalInDays > (config.claimDelayTime / 1 days) && intervalInDays < 59);
 
         uint256 interval = intervalInDays * 1 days;
 

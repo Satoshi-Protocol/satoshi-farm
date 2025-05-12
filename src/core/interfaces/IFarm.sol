@@ -423,40 +423,7 @@ interface IFarm {
      */
     function feeReceiver() external view returns (address feeReceiver);
 
-    /**
-     * @notice farm config of the farm
-     * @return depositCap The deposit cap
-     * @return depositCapPerUser The deposit cap per user
-     * @return rewardRate The reward rate
-     * @return depositStartTime The deposit start time
-     * @return depositEndTime The deposit end time
-     * @return rewardStartTime The reward start time
-     * @return rewardEndTime The reward end time
-     * @return claimStartTime The claim start time
-     * @return claimEndTime The claim end time
-     * @return claimDelayTime The claim delay time
-     * @return withdrawFee The withdraw fee
-     * @return withdrawEnabled The withdraw enabled
-     * @return forceClaimEnabled The force claim enabled
-     */
-    function farmConfig()
-        external
-        view
-        returns (
-            uint256 depositCap,
-            uint256 depositCapPerUser,
-            uint256 rewardRate,
-            uint32 depositStartTime,
-            uint32 depositEndTime,
-            uint32 rewardStartTime,
-            uint32 rewardEndTime,
-            uint32 claimStartTime,
-            uint32 claimEndTime,
-            uint32 claimDelayTime,
-            uint16 withdrawFee,
-            bool withdrawEnabled,
-            bool forceClaimEnabled
-        );
+    function getFarmConfig() external view returns (FarmConfig memory);
 
     /**
      * @notice whitelist config of the farm

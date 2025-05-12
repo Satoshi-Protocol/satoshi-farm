@@ -41,7 +41,7 @@ abstract contract TestConfig {
         claimStartTime: uint32(block.timestamp + 30 days),
         claimEndTime: uint32(block.timestamp + 60 days),
         claimDelayTime: uint32(1 days),
-        withdrawFee: 0,
+        withdrawFee: 500,
         withdrawEnabled: true,
         forceClaimEnabled: true
     });

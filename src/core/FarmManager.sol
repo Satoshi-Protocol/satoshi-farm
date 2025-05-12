@@ -125,7 +125,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
         farmBeacon = _farmBeacon;
         rewardToken = _rewardToken;
         feeReceiver = _feeReceiver;
-        
+
         emit FeeReceiverUpdated(_feeReceiver);
 
         // if dstEid is current chain, create reward farm
@@ -780,37 +780,7 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
     /// @inheritdoc IFarmManager
     function getFarmConfig(IFarm farm) external view returns (FarmConfig memory) {
-        (
-            uint256 depositCap,
-            uint256 depositCapPerUser,
-            uint256 rewardRate,
-            uint32 depositStartTime,
-            uint32 depositEndTime,
-            uint32 rewardStartTime,
-            uint32 rewardEndTime,
-            uint32 claimStartTime,
-            uint32 claimEndTime,
-            uint32 claimDelayTime,
-            uint16 withdrawFee,
-            bool withdrawEnabled,
-            bool instantClaimEnabled
-        ) = farm.farmConfig();
-
-        return FarmConfig(
-            depositCap,
-            depositCapPerUser,
-            rewardRate,
-            depositStartTime,
-            depositEndTime,
-            rewardStartTime,
-            rewardEndTime,
-            claimStartTime,
-            claimEndTime,
-            claimDelayTime,
-            withdrawFee,
-            withdrawEnabled,
-            instantClaimEnabled
-        );
+        return farm.getFarmConfig();
     }
 
     /// @inheritdoc IFarmManager

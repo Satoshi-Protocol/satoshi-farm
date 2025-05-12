@@ -141,8 +141,9 @@ abstract contract BaseTest is DeployBase {
         view
         returns (uint256, bytes32)
     {
-        (,,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
-        uint256 claimableTime = currentTime + claimDelayTime;
+        // (,,,,,,,,,, uint256 claimDelayTime,,) =
+        FarmConfig memory config = farm.getFarmConfig();
+        uint256 claimableTime = currentTime + config.claimDelayTime;
         return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime, nonce)));
     }
 

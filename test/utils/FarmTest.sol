@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { FarmConfig } from "../../src/core/interfaces/IFarm.sol";
 
-import { DEFAULT_NATIVE_ASSET_ADDRESS, IFarm } from "../../src/core/interfaces/IFarm.sol";
+import { DEFAULT_NATIVE_ASSET_ADDRESS, FEE_BASE, IFarm } from "../../src/core/interfaces/IFarm.sol";
 import {
     DepositParams,
     DepositWithProofParams,
@@ -191,6 +191,11 @@ contract FarmTest is Test {
 
         // Expect Withdraw event
         (, uint256 withdrawFeeAmount) = farmManager.previewWithdrawFeeAmount(params.farm, params.amount);
+        assertEq(
+            withdrawFeeAmount,
+            params.amount * params.farm.getFarmConfig().withdrawFee / FEE_BASE,
+            "Incorrect withdraw fee"
+        );
         uint256 withdrawAfterFee = params.amount - withdrawFeeAmount;
         vm.expectEmit(true, true, true, true);
         emit IFarmManager.Withdraw(
@@ -259,8 +264,8 @@ contract FarmTest is Test {
         view
         returns (uint256, bytes32)
     {
-        (,,,,,,,,,, uint256 claimDelayTime,,) = farm.farmConfig();
-        uint256 claimableTime = currentTime + claimDelayTime;
+        FarmConfig memory config = farm.getFarmConfig();
+        uint256 claimableTime = currentTime + config.claimDelayTime;
         return (claimableTime, keccak256(abi.encode(amount, owner, receiver, claimableTime, nonce)));
     }
 
