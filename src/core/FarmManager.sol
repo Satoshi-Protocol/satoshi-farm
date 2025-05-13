@@ -189,6 +189,12 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
+    function updateWithdrawFee(IFarm farm, uint16 withdrawFee) external onlyOwner {
+        farm.updateWithdrawFee(withdrawFee);
+        emit WithdrawFeeUpdated(farm, withdrawFee);
+    }
+
+    /// @inheritdoc IFarmManager
     function updateFarmConfig(IFarm farm, FarmConfig memory farmConfig) external onlyOwner {
         farm.updateFarmConfig(farmConfig);
         emit FarmConfigUpdated(farm, farmConfig);
@@ -198,6 +204,12 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     function updateWhitelistConfig(IFarm farm, WhitelistConfig memory whitelistConfig) external onlyOwner {
         farm.updateWhitelistConfig(whitelistConfig);
         emit WhitelistConfigUpdated(farm, whitelistConfig);
+    }
+
+    /// @inheritdoc IFarmManager
+    function claimFee(IFarm farm, uint256 amount) external onlyOwner {
+        farm.claimFee(amount);
+        emit FeeClaimed(farm, amount);
     }
 
     /// @inheritdoc IFarmManager
@@ -386,8 +398,8 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
 
         _checkFarmIsValid(farm);
 
-        (uint256 amountAfterFee, uint256 withdrawFeeAmount) = farm.withdraw(amount, msg.sender, receiver);
-        emit Withdraw(farm, amount, amountAfterFee, withdrawFeeAmount, msg.sender, receiver);
+        (uint256 amountAfterFee, uint256 feeAmount) = farm.withdraw(amount, msg.sender, receiver);
+        emit Withdraw(farm, amount, amountAfterFee, feeAmount, msg.sender, receiver);
     }
 
     /// @inheritdoc IFarmManager

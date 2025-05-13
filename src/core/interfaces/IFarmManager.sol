@@ -213,6 +213,7 @@ interface IFarmManager is IOAppComposer {
     error TransferNativeAssetFailed(address to, uint256 amount);
 
     event RewardRateUpdated(IFarm farm, uint256 rewardRate);
+    event WithdrawFeeUpdated(IFarm farm, uint16 withdrawFee);
     event FeeReceiverUpdated(address feeReceiver);
     event FarmConfigUpdated(IFarm farm, FarmConfig farmConfig);
     event WhitelistConfigUpdated(IFarm farm, WhitelistConfig whitelistConfig);
@@ -227,7 +228,7 @@ interface IFarmManager is IOAppComposer {
         IFarm indexed farm,
         uint256 indexed amount,
         uint256 amountAfterFee,
-        uint256 withdrawFeeAmount,
+        uint256 feeAmount,
         address owner,
         address receiver
     );
@@ -259,8 +260,8 @@ interface IFarmManager is IOAppComposer {
         bytes32 indexed claimId
     );
     event ClaimAndStake(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
-
     event InstantClaim(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
+    event FeeClaimed(IFarm indexed farm, uint256 indexed amount);
 
     /**
      * @notice Initialize the farm manager
@@ -299,6 +300,13 @@ interface IFarmManager is IOAppComposer {
     function updateRewardRate(IFarm farm, uint256 rewardRate) external;
 
     /**
+     * @notice Update the withdraw fee
+     * @param farm The farm to update
+     * @param withdrawFee The new withdraw fee
+     */
+    function updateWithdrawFee(IFarm farm, uint16 withdrawFee) external;
+
+    /**
      * @notice Update the fee receiver
      * @param feeReceiver The new fee receiver
      */
@@ -317,6 +325,13 @@ interface IFarmManager is IOAppComposer {
      * @param whitelistConfig The whitelist configuration
      */
     function updateWhitelistConfig(IFarm farm, WhitelistConfig memory whitelistConfig) external;
+
+    /**
+     * @notice Claim the fee
+     * @param farm The farm to claim
+     * @param amount The amount to claim
+     */
+    function claimFee(IFarm farm, uint256 amount) external;
 
     /**
      * @notice Create a farm

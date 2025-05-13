@@ -48,6 +48,8 @@ contract Farm is IFarm, Initializable {
     uint256 internal _lastRewardPerToken;
     /// last update time
     uint256 internal _lastUpdateTime;
+    /// collected fees
+    uint256 internal _collectedFees;
     /// user shares mapping (user => shares)
     mapping(address => uint256) internal _shares;
     /// last user reward per token mapping (user => lastUserRewardPerToken)
@@ -155,6 +157,25 @@ contract Farm is IFarm, Initializable {
     }
 
     /// @inheritdoc IFarm
+    function claimFee(uint256 amount) external onlyFarmManager {
+        if (amount > _collectedFees) revert AmountExceedsCollectedFees(amount, _collectedFees);
+
+        _collectedFees -= amount;
+
+        address receiver = farmManager.feeReceiver();
+        if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
+            // transfer native asset to fee receiver
+            (bool successTrfAmt,) = receiver.call{ value: amount }("");
+            if (!successTrfAmt) revert TransferNativeAssetFailed();
+        } else {
+            // transfer ERC20 token to fee receiver
+            underlyingAsset.safeTransfer(receiver, amount);
+        }
+
+        emit FeesClaimed(amount, receiver);
+    }
+
+    /// @inheritdoc IFarm
     function depositNativeAssetWithProof(
         uint256 amount,
         address depositor,
@@ -231,9 +252,9 @@ contract Farm is IFarm, Initializable {
     {
         _beforeWithdraw(amount, owner, receiver);
 
-        (uint256 amountAfterFee, uint256 withdrawFeeAmount) = _withdraw(amount, owner, receiver);
+        (uint256 amountAfterFee, uint256 feeAmount) = _withdraw(amount, owner, receiver);
 
-        return (amountAfterFee, withdrawFeeAmount);
+        return (amountAfterFee, feeAmount);
     }
 
     /// @inheritdoc IFarm
@@ -340,6 +361,11 @@ contract Farm is IFarm, Initializable {
     /// @inheritdoc IFarm
     function lastUpdateTime() external view returns (uint256) {
         return _lastUpdateTime;
+    }
+
+    /// @inheritdoc IFarm
+    function collectedFees() external view returns (uint256) {
+        return _collectedFees;
     }
 
     /// @inheritdoc IFarm
@@ -521,30 +547,25 @@ contract Farm is IFarm, Initializable {
     function _withdraw(uint256 amount, address owner, address receiver) internal returns (uint256, uint256) {
         _updateShares(amount, owner, false);
 
-        uint256 withdrawFeeAmount = (amount.mulDiv(farmConfig.withdrawFee, FEE_BASE));
-        uint256 amountAfterFee = amount - withdrawFeeAmount;
+        uint256 feeAmount = (amount.mulDiv(farmConfig.withdrawFee, FEE_BASE));
+        uint256 amountAfterFee = amount - feeAmount;
+
+        if (amountAfterFee > 0) {
+            _collectedFees += feeAmount;
+            emit FeesCollected(feeAmount);
+        }
 
         if (address(underlyingAsset) == DEFAULT_NATIVE_ASSET_ADDRESS) {
-            // case1: withdraw native asset
-            if (withdrawFeeAmount > 0) {
-                // transfer fee to fee receiver
-                (bool successTrfFee,) = farmManager.feeReceiver().call{ value: withdrawFeeAmount }("");
-                if (!successTrfFee) revert TransferNativeAssetFailed();
-            }
-
+            // transfer native asset to receiver
             (bool successTrfAmt,) = receiver.call{ value: amountAfterFee }("");
             if (!successTrfAmt) revert TransferNativeAssetFailed();
         } else {
-            // case2: withdraw ERC20 token
-            if (withdrawFeeAmount > 0) {
-                // transfer fee to fee receiver
-                underlyingAsset.safeTransfer(farmManager.feeReceiver(), withdrawFeeAmount);
-            }
+            // transfer ERC20 token to receiver
             underlyingAsset.safeTransfer(receiver, amountAfterFee);
         }
 
-        emit Withdraw(amount, amountAfterFee, withdrawFeeAmount, owner, receiver);
-        return (amountAfterFee, withdrawFeeAmount);
+        emit Withdraw(amount, amountAfterFee, feeAmount, owner, receiver);
+        return (amountAfterFee, feeAmount);
     }
 
     /**
