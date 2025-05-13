@@ -104,28 +104,25 @@ interface IFarm {
     error AmountExceedsCollectedFees(uint256 amount, uint256 collectedFees);
 
     event FarmConfigUpdated(FarmConfig farmConfig);
-    event Deposit(uint256 indexed amount, address depositor, address receiver);
-    event Withdraw(uint256 indexed amount, uint256 amountAfterFee, uint256 feeAmount, address owner, address receiver);
+    event Deposit(uint256 amount, address indexed depositor, address indexed receiver);
+    event Withdraw(
+        uint256 amount, uint256 amountAfterFee, uint256 feeAmount, address indexed owner, address indexed receiver
+    );
     event ClaimRequested(
-        bytes32 indexed claimId,
-        uint256 indexed amount,
-        address owner,
-        address receiver,
-        uint256 claimableTime,
-        uint256 nonce
+        bytes32 indexed claimId, uint256 amount, address owner, address receiver, uint256 claimableTime, uint256 nonce
     );
     event ClaimExecuted(
-        bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver, uint256 claimedTime
+        bytes32 indexed claimId, uint256 amount, address indexed owner, address indexed receiver, uint256 claimedTime
     );
-    event ForceClaimExecuted(bytes32 indexed claimId, uint256 indexed amount, address owner, address receiver);
-    event ForceClaimed(uint256 indexed amount, address owner, address receiver);
-    event InstantClaimed(uint256 indexed amount, address owner, address receiver);
-    event PendingRewardUpdated(address indexed user, uint256 indexed amount, bool indexed add);
-    event LastRewardPerTokenUpdated(uint256 indexed lastRewardPerToken);
-    event UserRewardPerTokenUpdated(address indexed user, uint256 indexed lastRewardPerToken);
+    event ForceClaimExecuted(bytes32 indexed claimId, uint256 amount, address indexed owner, address indexed receiver);
+    event ForceClaimed(uint256 amount, address indexed owner, address indexed receiver);
+    event InstantClaimed(uint256 amount, address indexed owner, address indexed receiver);
+    event PendingRewardUpdated(address indexed user, uint256 amount, bool add);
+    event LastRewardPerTokenUpdated(uint256 lastRewardPerToken);
+    event UserRewardPerTokenUpdated(address indexed user, uint256 lastRewardPerToken);
     event WhitelistConfigUpdated(WhitelistConfig whitelistConfig);
-    event FeesCollected(uint256 indexed amount);
-    event FeesClaimed(uint256 indexed amount, address indexed receiver);
+    event FeesCollected(uint256 amount);
+    event FeesClaimed(uint256 amount, address indexed receiver);
 
     /**
      * @notice Initialize the farm with the underlying asset and farm manager

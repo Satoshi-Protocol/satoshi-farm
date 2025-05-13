@@ -220,21 +220,14 @@ interface IFarmManager is IOAppComposer {
     event LzConfigUpdated(LzConfig lzConfig);
     event DstInfoUpdated(DstInfo dstInfo);
     event FarmCreated(IFarm indexed farm, IERC20 indexed underlyingAsset, IFarm rewardFarm);
-    event DepositWithProof(
-        IFarm indexed farm, uint256 indexed amount, address sender, address receiver, bytes32[] merkleProof
-    );
-    event Deposit(IFarm indexed farm, uint256 indexed amount, address sender, address receiver);
+    event DepositWithProof(IFarm indexed farm, uint256 amount, address sender, address receiver, bytes32[] merkleProof);
+    event Deposit(IFarm indexed farm, uint256 amount, address sender, address receiver);
     event Withdraw(
-        IFarm indexed farm,
-        uint256 indexed amount,
-        uint256 amountAfterFee,
-        uint256 feeAmount,
-        address owner,
-        address receiver
+        IFarm indexed farm, uint256 amount, uint256 amountAfterFee, uint256 feeAmount, address owner, address receiver
     );
     event ClaimRequested(
         IFarm indexed farm,
-        uint256 indexed amount,
+        uint256 amount,
         address owner,
         address receiver,
         uint256 claimableTime,
@@ -243,7 +236,7 @@ interface IFarmManager is IOAppComposer {
     );
     event ClaimExecuted(
         IFarm indexed farm,
-        uint256 indexed amount,
+        uint256 amount,
         address owner,
         address receiver,
         uint256 claimedTime,
@@ -252,16 +245,16 @@ interface IFarmManager is IOAppComposer {
     );
     event PendingClaimStaked(
         IFarm indexed farm,
-        uint256 indexed amount,
+        uint256 amount,
         address owner,
         address receiver,
         uint256 claimableTime,
         uint256 nonce,
         bytes32 indexed claimId
     );
-    event ClaimAndStake(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
-    event InstantClaim(IFarm indexed farm, uint256 indexed amount, address owner, address receiver);
-    event FeeClaimed(IFarm indexed farm, uint256 indexed amount);
+    event ClaimAndStake(IFarm indexed farm, uint256 amount, address owner, address receiver);
+    event InstantClaim(IFarm indexed farm, uint256 amount, address owner, address receiver);
+    event FeeClaimed(IFarm indexed farm, uint256 amount);
 
     /**
      * @notice Initialize the farm manager
