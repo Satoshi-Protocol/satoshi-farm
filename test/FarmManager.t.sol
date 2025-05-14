@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { IFarm } from "../src/core/interfaces/IFarm.sol";
+import { FEE_BASE, IFarm } from "../src/core/interfaces/IFarm.sol";
 
 import { FarmConfig } from "../src/core/interfaces/IFarm.sol";
 import {
@@ -19,7 +19,7 @@ import {
 } from "../src/core/interfaces/IFarmManager.sol";
 import { BaseTest } from "./utils/BaseTest.sol";
 import { DeployBase } from "./utils/DeployBase.sol";
-import { DEPLOYER, OWNER, TestConfig } from "./utils/TestConfig.sol";
+import { DEPLOYER, FEE_RECEIVER, OWNER, TestConfig } from "./utils/TestConfig.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "forge-std/console.sol";
@@ -320,6 +320,47 @@ contract FarmManagerTest is BaseTest {
         ClaimAndStakeParams memory claimAndStakeParams =
             ClaimAndStakeParams({ farm: farm, amount: claimAmt, receiver: user1 });
         farmManager.claimAndStake(claimAndStakeParams);
+        vm.stopPrank();
+    }
+
+    function test_withdraw() public {
+        FarmConfig memory farmConfig = farmManager.getFarmConfig(farm);
+
+        deal(address(asset), user1, 1e18);
+
+        uint256 amount = 1e18;
+
+        // deposit and check the share is correct
+        depositERC20(user1, farm, amount, user1);
+        assertEq(farmManager.shares(farm, user1), amount, "Share is not correct");
+
+        vm.warp(farmConfig.withdrawEnabled ? block.timestamp + 1 days : block.timestamp);
+
+        withdraw(user1, farm, amount, user1);
+
+        // check the amount is correct
+        uint256 withdrawFee = (amount * farmConfig.withdrawFee) / FEE_BASE;
+        assertEq(asset.balanceOf(user1), amount - withdrawFee, "Withdraw amount is not correct");
+
+        vm.startPrank(DEPLOYER);
+        assertEq(farm.collectedFees(), withdrawFee, "Withdraw fee is not correct");
+        // check fee receiver receives the fee
+        farmManager.claimFee(farm, withdrawFee);
+        assertEq(asset.balanceOf(FEE_RECEIVER), withdrawFee, "Fee receiver amount is not correct");
+
+        // update fee rate
+        farmManager.updateWithdrawFee(farm, 1000);
+        farmConfig = farmManager.getFarmConfig(farm);
+        assertEq(farmConfig.withdrawFee, 1000, "WithdrawFee is not correct");
+        vm.stopPrank();
+
+        deal(address(asset), user1, 1e18);
+        depositERC20(user1, farm, amount, user1);
+        withdraw(user1, farm, amount, user1);
+
+        vm.startPrank(DEPLOYER);
+        withdrawFee = (amount * farmConfig.withdrawFee) / FEE_BASE;
+        assertEq(farm.collectedFees(), withdrawFee, "Withdraw fee is not correct");
         vm.stopPrank();
     }
 }
