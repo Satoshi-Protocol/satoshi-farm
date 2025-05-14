@@ -618,50 +618,6 @@ interface IFarmManager is IOAppComposer {
         returns (uint16 withdrawFee, uint256 withdrawFeeAmount);
 
     /**
-     * @notice Last reward per token
-     * @param farm The farm to query
-     * @return lastRewardPerToken The last reward per token
-     */
-    function lastRewardPerToken(IFarm farm) external view returns (uint256 lastRewardPerToken);
-
-    /**
-     * @notice Last update time
-     * @param farm The farm to query
-     * @return lastUpdateTime The last update time
-     */
-    function lastUpdateTime(IFarm farm) external view returns (uint256 lastUpdateTime);
-
-    /**
-     * @notice Last user reward per token
-     * @param farm The farm to query
-     * @param addr The user address
-     * @return lastUserRewardPerToken The last user reward per token
-     */
-    function getLastUserRewardPerToken(
-        IFarm farm,
-        address addr
-    )
-        external
-        view
-        returns (uint256 lastUserRewardPerToken);
-
-    /**
-     * @notice Pending reward of the user
-     * @param farm The farm to query
-     * @param addr The user address
-     * @return pendingReward The pending reward of the user
-     */
-    function getPendingReward(IFarm farm, address addr) external view returns (uint256 pendingReward);
-
-    /**
-     * @notice Get the nonce of the user
-     * @param farm The farm to query
-     * @param addr The user address
-     * @return nonce The nonce of the user
-     */
-    function getNonce(IFarm farm, address addr) external view returns (uint256);
-
-    /**
      * @notice Deposit is enabled or not
      * @param farm The farm to query
      * @return depositEnabled The deposit is enabled or not

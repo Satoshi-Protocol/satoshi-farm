@@ -69,7 +69,7 @@ abstract contract BaseTest is DeployBase {
         returns (uint256, uint256, uint256, bytes32)
     {
         vm.startPrank(user);
-        uint256 claimAmt = farm.getPendingReward(user);
+        uint256 claimAmt = farm.previewReward(user);
         uint256 nonce = farm.getNonce(user);
         (uint256 claimableTime, bytes32 claimId) =
             _prepareClaimId(farm, claimAmt, user, receiver, block.timestamp, nonce);

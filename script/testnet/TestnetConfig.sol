@@ -204,7 +204,7 @@ abstract contract TestScriptConfig {
         console.log("Total shares: %d", rewardFarm.totalShares());
         console.log("Shares: %d", rewardFarm.shares(owner));
         console.log("Last reward per token: %d", rewardFarm.lastRewardPerToken());
-        console.log("Pending reward: %d", farmManager.getPendingReward(rewardFarm, owner));
+        console.log("Preview reward: %d", farmManager.previewReward(rewardFarm, owner));
         console.log("Is claimable: %d", farmManager.isClaimable(rewardFarm));
     }
 

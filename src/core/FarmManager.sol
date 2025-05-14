@@ -746,31 +746,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function lastRewardPerToken(IFarm farm) external view returns (uint256) {
-        return farm.lastRewardPerToken();
-    }
-
-    /// @inheritdoc IFarmManager
-    function lastUpdateTime(IFarm farm) external view returns (uint256) {
-        return farm.lastUpdateTime();
-    }
-
-    /// @inheritdoc IFarmManager
-    function getLastUserRewardPerToken(IFarm farm, address addr) external view returns (uint256) {
-        return farm.getLastUserRewardPerToken(addr);
-    }
-
-    /// @inheritdoc IFarmManager
-    function getPendingReward(IFarm farm, address addr) external view returns (uint256) {
-        return farm.getPendingReward(addr);
-    }
-
-    /// @inheritdoc IFarmManager
-    function getNonce(IFarm farm, address addr) external view returns (uint256) {
-        return farm.getNonce(addr);
-    }
-
-    /// @inheritdoc IFarmManager
     function isDepositEnabled(IFarm farm) external view returns (bool) {
         return farm.isDepositEnabled();
     }
