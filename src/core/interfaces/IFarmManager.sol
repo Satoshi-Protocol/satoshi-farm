@@ -639,13 +639,6 @@ interface IFarmManager is IOAppComposer {
     function isValidFarm(IFarm farm) external view returns (bool validFarm);
 
     /**
-     * @notice Get the underlying asset of the farm
-     * @param farm The farm to query
-     * @return underlyingAsset The underlying asset of the farm
-     */
-    function getUnderlyingAsset(IFarm farm) external view returns (IERC20 underlyingAsset);
-
-    /**
      * @notice Get the farm configuration
      * @param farm The farm to query
      * @return farmConfig The farm configuration

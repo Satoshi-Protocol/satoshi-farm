@@ -761,11 +761,6 @@ contract FarmManager is IFarmManager, OwnableUpgradeable, PausableUpgradeable, U
     }
 
     /// @inheritdoc IFarmManager
-    function getUnderlyingAsset(IFarm farm) external view returns (IERC20) {
-        return farm.underlyingAsset();
-    }
-
-    /// @inheritdoc IFarmManager
     function getFarmConfig(IFarm farm) external view returns (FarmConfig memory) {
         return farm.getFarmConfig();
     }
